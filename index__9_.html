@@ -1521,6 +1521,7 @@ async function openConvo(otherUid){
 
       <!-- Messages -->
       <div id="chat-debug" style="text-align:center;font-size:.7rem;color:var(--text3);padding:4px">cid: ${esc(cid)} | maj: 0</div>
+      <div id="chat-debug2" style="text-align:center;font-size:.65rem;color:var(--text3);padding:2px;word-break:break-all">cids: ...</div>
       <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px;min-height:0">
         <div style="text-align:center;color:var(--text3);font-size:.82rem">Chargement...</div>
       </div>
@@ -1546,6 +1547,10 @@ async function openConvo(otherUid){
   const chatRef=ref(db,`spk3/messages/${cid}`);
   currentChatRef=chatRef;
   currentChatCid=cid;
+  get(ref(db,'spk3/messages')).then(allSnap=>{
+    const dbg2=$('chat-debug2');
+    if(dbg2 && allSnap.exists()) dbg2.textContent='cids: '+Object.keys(allSnap.val()).join(', ');
+  });
   let updateCount=0;
   onValue(chatRef, snap=>{
     if(currentChatCid!==cid) return;
