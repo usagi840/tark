@@ -1575,10 +1575,13 @@ async function openConvo(otherUid){
     inp.value='';
     const msg={from:myId,text,at:Date.now()};
     try{
-      const msgRef=push(ref(db,`spk3/messages/${cid}`));
+      const sendCid=convoId(myId,otherUid);
+      const msgRef=push(ref(db,`spk3/messages/${sendCid}`));
       await set(msgRef,msg);
       await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
       await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
+      const dbg=$('chat-debug');
+      if(dbg) dbg.textContent='ENVOYE vers cid='+sendCid+' par myId='+myId+' otherUid='+otherUid;
     }catch(err){
       const dbg=$('chat-debug');
       if(dbg) dbg.textContent='ERREUR ENVOI: '+(err?.message||err);
