@@ -1561,7 +1561,7 @@ async function openConvo(otherUid){
     if(!box) return;
     const msgs=[];
     if(snap.exists()) snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(dbg) dbg.textContent=`cid:${cid}|myId:${myId}|maj:${updateCount}|n:${msgs.length}|`+msgs.map(m=>`[${m.id}:${m.from}:${m.text}]`).join(' ');
+    if(dbg) dbg.textContent=`cid:${JSON.stringify(cid)}|len:${cid.length}|myId:${myId}|maj:${updateCount}|n:${msgs.length}|`+msgs.map(m=>`[${m.id}:${m.from}:${m.text}]`).join(' ');
     if(!msgs.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.82rem">Dis bonjour 👋</div>'; return; }
     box.innerHTML=msgs.map(m=>{
       const mine=m.from===myId;
