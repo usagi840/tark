@@ -486,9 +486,10 @@ input[type=file]{display:none}
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Recherche
     </button>
-    <button class="bnav-btn" id="bnav-post">
+    <button class="bnav-btn" id="bnav-post" style="position:relative">
       <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       Messages
+      <span id="bnav-post-dot" style="display:none;position:absolute;top:4px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;background:var(--accent);border:1.5px solid var(--card)"></span>
     </button>
     <button class="bnav-btn" id="bnav-profile">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -534,7 +535,7 @@ const db=getDatabase(initializeApp({
 
 // ── STATE ──────────────────────────────────────────────────
 let myId=null,myData=null,feedListener=null,pendingImg=null,signupAv='assets/shelly_pin.png';
-let currentChatCid=null,chatSyncTimer=null;
+let currentChatCid=null,chatSyncTimer=null,currentChatRef=null,openConvoSeq=0;
 
 // ── UTILS ──────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
@@ -662,6 +663,8 @@ function bootApp(){
   if($('sav'))$('sav').src=myData.avatar||DEFAV;
   // sname removed
   if($('shandle'))$('shandle').textContent='@'+myData.name;
+  updateMsgDot();
+  setInterval(updateMsgDot, 5000);
   showRecherche();
 
 
@@ -678,7 +681,7 @@ $('btn-logout')?.addEventListener('click',()=>{
 
 // ── NAV ────────────────────────────────────────────────────
 function showPage(p){
-  if(p!=='messages' && currentChatCid){ currentChatCid=null; if(chatSyncTimer){ clearInterval(chatSyncTimer); chatSyncTimer=null; } }
+  if(p!=='messages' && currentChatCid){ openConvoSeq++; currentChatCid=null; if(chatSyncTimer){ clearInterval(chatSyncTimer); chatSyncTimer=null; } if(currentChatRef){ off(currentChatRef); currentChatRef=null; } }
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.bnav-btn').forEach(el=>el.classList.remove('active'));
   $('page-'+p)?.classList.add('active');
@@ -1482,32 +1485,96 @@ function convoId(a,b){ return [a,b].sort().join('__'); }
 async function loadConvos(){
   const list=$('convos-list');
   if(!list) return;
-  const snap=await get(ref(db,`spk3/convos/${myId}`));
-  if(!snap.exists()){ list.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucune conversation pour l\'instant</div>'; return; }
-  const convos=[];
-  snap.forEach(c=>convos.push({uid:c.key,...c.val()}));
+  const convos=await fetchMyConvos();
+  if(!convos.length){ list.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucune conversation pour l\'instant</div>'; updateMsgDot(); return; }
   convos.sort((a,b)=>(b.lastAt||0)-(a.lastAt||0));
-  list.innerHTML=convos.map(c=>`
-    <div data-uid="${esc(c.uid)}" class="convo-item" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);cursor:pointer;box-shadow:var(--shadow);transition:all .15s">
+  list.innerHTML=convos.map(c=>{
+    const isNew=c.read===false;
+    return `
+    <div data-uid="${esc(c.uid)}" class="convo-item" style="position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);cursor:pointer;box-shadow:var(--shadow);transition:all .15s;overflow:hidden">
       <img src="${esc(c.avatar||DEFAV)}" style="width:44px;height:44px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:.9rem;color:var(--text)">${esc(c.uid)}</div>
         <div style="font-size:.78rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.lastMsg||'...')}</div>
       </div>
-    </div>`).join('');
+      ${isNew?'<div style="position:absolute;top:0;right:0;background:#FFAD9A;color:#fff;font-weight:800;font-size:1.05rem;padding:10px 18px;border-radius:0 14px 0 14px">New</div>':''}
+    </div>`;
+  }).join('');
   list.querySelectorAll('.convo-item').forEach(el=>{
     el.addEventListener('mouseenter',()=>el.style.background='var(--bg2)');
     el.addEventListener('mouseleave',()=>el.style.background='var(--card)');
     el.addEventListener('click',()=>openConvo(el.dataset.uid));
   });
+  updateMsgDot();
+}
+
+// Récupère toutes les conversations de l'utilisateur courant de façon fiable :
+// on liste les cid sous spk3/msgs qui concernent myId, puis on lit chaque
+// entrée spk3/convos/myId/{otherUid} individuellement (plus robuste qu'une
+// lecture groupée sur le nœud parent qui peut être incomplète).
+async function fetchMyConvos(){
+  const convos=[];
+  const seen=new Set();
+  // 1) Tenter la lecture groupée (rapide quand elle fonctionne)
+  try{
+    const snap=await get(ref(db,`spk3/convos/${myId}`));
+    if(snap.exists()) snap.forEach(c=>{ if(!seen.has(c.key)){ seen.add(c.key); convos.push({uid:c.key,...c.val()}); } });
+  }catch(e){}
+  // 2) Compléter avec les conversations connues via spk3/msgs (filet de sécurité)
+  try{
+    const msgsSnap=await get(ref(db,'spk3/msgs'));
+    if(msgsSnap.exists()){
+      const others=[];
+      msgsSnap.forEach(c=>{
+        const parts=c.key.split('__');
+        if(parts.length===2 && parts.includes(myId)){
+          const other=parts[0]===myId?parts[1]:parts[0];
+          if(other && other!==myId && !seen.has(other)) others.push(other);
+        }
+      });
+      for(const other of others){
+        try{
+          const cSnap=await get(ref(db,`spk3/convos/${myId}/${other}`));
+          if(cSnap.exists()){ seen.add(other); convos.push({uid:other,...cSnap.val()}); }
+          else{
+            // Pas d'entrée convos mais des messages existent : reconstruire un minimum
+            const otherSnap=await get(ref(db,`spk3/users/${other}`));
+            const otherData=otherSnap.exists()?otherSnap.val():{};
+            seen.add(other);
+            convos.push({uid:other,avatar:otherData.avatar||DEFAV,lastMsg:'',lastAt:0,read:true});
+          }
+        }catch(e){}
+      }
+    }
+  }catch(e){}
+  return convos;
+}
+
+async function updateMsgDot(){
+  const dot=$('bnav-post-dot');
+  if(!dot) return;
+  const convos=await fetchMyConvos();
+  const hasNew=convos.some(c=>c.read===false);
+  dot.style.display=hasNew?'block':'none';
 }
 
 async function openConvo(otherUid){
+  const myToken=++openConvoSeq;
   showPage('messages');
   // Sauvegarder la convo dans /convos/myId/otherUid
   const cid=convoId(myId,otherUid);
   const otherSnap=await get(ref(db,`spk3/users/${otherUid}`));
+  if(myToken!==openConvoSeq) return; // une autre conversation a été ouverte pendant ce temps
   const otherData=otherSnap.exists()?otherSnap.val():{};
+
+  // Marquer comme lu
+  const myConvoSnap=await get(ref(db,`spk3/convos/${myId}/${otherUid}`));
+  if(myToken!==openConvoSeq) return;
+  if(myConvoSnap.exists() && myConvoSnap.val().read===false){
+    await update(ref(db,`spk3/convos/${myId}/${otherUid}`),{read:true});
+    updateMsgDot();
+  }
+  if(myToken!==openConvoSeq) return;
 
   $('page-messages').innerHTML=`
     <div style="width:100%;display:flex;flex-direction:column;height:100%">
@@ -1532,18 +1599,22 @@ async function openConvo(otherUid){
     </div>`;
 
   $('convo-back').addEventListener('click', ()=>{
+    openConvoSeq++;
     currentChatCid=null;
     if(chatSyncTimer){ clearInterval(chatSyncTimer); chatSyncTimer=null; }
+    if(currentChatRef){ off(currentChatRef); currentChatRef=null; }
     showMessages();
   });
   $('convo-avatar').addEventListener('click', ()=>showProfile(otherUid, true));
   $('convo-name').addEventListener('click', ()=>showProfile(otherUid, true));
 
-  // Arrêter l'ancienne synchro si on change de conversation
+  // Arrêter l'ancienne synchro et l'ancien listener si on change de conversation
   if(chatSyncTimer){ clearInterval(chatSyncTimer); chatSyncTimer=null; }
+  if(currentChatRef){ off(currentChatRef); currentChatRef=null; }
   currentChatCid=cid;
 
   const chatRef=ref(db,`spk3/msgs/${cid}`);
+  currentChatRef=chatRef;
   let localMsgs={}; // key -> msg
 
   const renderChat=()=>{
@@ -1572,6 +1643,7 @@ async function openConvo(otherUid){
   };
 
   await syncChat();
+  if(myToken!==openConvoSeq) return;
   // Synchro en direct + filet de sécurité par sondage
   onValue(chatRef, snap=>{
     if(currentChatCid!==cid) return;
@@ -1595,8 +1667,8 @@ async function openConvo(otherUid){
     renderChat();
     try{
       await set(ref(db,`spk3/msgs/${cid}/${msgKey}`),msg);
-      await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
-      await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:text,lastAt:Date.now()});
+      await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:text,lastAt:Date.now(),lastFrom:myId,read:true});
+      await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:text,lastAt:Date.now(),lastFrom:myId,read:false});
     }catch(err){
       delete localMsgs[msgKey];
       renderChat();
