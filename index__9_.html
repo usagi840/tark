@@ -489,7 +489,7 @@ input[type=file]{display:none}
     <button class="bnav-btn" id="bnav-post" style="position:relative">
       <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       Messages
-      <span id="bnav-post-dot" style="display:none;position:absolute;top:0;right:calc(50% - 22px);width:10px;height:10px;border-radius:50%;background:#FFAD9A;border:2px solid var(--card)"></span>
+      <span id="bnav-post-dot" style="display:none;position:absolute;top:5px;right:18px;width:10px;height:10px;border-radius:50%;background:#FFAD9A;border:2px solid var(--card)"></span>
     </button>
     <button class="bnav-btn" id="bnav-profile">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1497,7 +1497,7 @@ async function loadConvos(){
         <div style="font-weight:700;font-size:.9rem;color:var(--text)">${esc(c.uid)}</div>
         <div style="font-size:.78rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.lastMsg||'...')}</div>
       </div>
-      ${isNew?'<div style="position:absolute;top:0;right:0;background:#FFAD9A;color:#fff;font-weight:800;font-size:.95rem;padding:8px 16px;border-radius:0 14px 0 12px">New</div>':''}
+      ${isNew?'<div style="position:absolute;top:0;right:0;background:#FFAD9A;color:#fff;font-weight:800;font-size:1.05rem;padding:6px 12px;border-radius:0 14px 0 12px">New</div>':''}
     </div>`;
   }).join('');
   list.querySelectorAll('.convo-item').forEach(el=>{
