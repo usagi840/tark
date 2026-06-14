@@ -627,11 +627,18 @@ async function doLogin(){
   if(!name||!pwd){$('login-err').textContent='Remplis tous les champs';return;}
   $('btn-login').disabled=true;$('btn-login').textContent='Connexion...';
   try{
-    const snap=await get(ref(db,`spk3/users/${name}`));
-    if(!snap.exists()){$('login-err').textContent='Pseudo introuvable';return;}
+    let id=name;
+    let snap=await get(ref(db,`spk3/users/${id}`));
+    let hops=0;
+    while(snap.exists() && snap.val()?.redirectTo && hops<10){
+      id=snap.val().redirectTo;
+      snap=await get(ref(db,`spk3/users/${id}`));
+      hops++;
+    }
+    if(!snap.exists()||snap.val()?.redirectTo){$('login-err').textContent='Pseudo introuvable';return;}
     const u=snap.val();
     if(u.pwd!==btoa(unescape(encodeURIComponent(pwd)))){$('login-err').textContent='Mot de passe incorrect';return;}
-    myId=name;myData=u;saveS();bootApp();
+    myId=id;myData=u;saveS();bootApp();
   }catch(e){$('login-err').textContent='Erreur de connexion';}
   finally{$('btn-login').disabled=false;$('btn-login').textContent='Se connecter';}
 }
@@ -2273,7 +2280,7 @@ async function fetchAdminData(){
     get(ref(db,'spk3/annonces'))
   ]);
   admUsers=[];admPosts=[];admAnnonces=[];
-  if(usersSnap.exists()) usersSnap.forEach(c=>{const u=c.val();if(u)admUsers.push({id:c.key,...u});});
+  if(usersSnap.exists()) usersSnap.forEach(c=>{const u=c.val();if(u&&!u.redirectTo)admUsers.push({id:c.key,...u});});
   if(postsSnap.exists()) postsSnap.forEach(c=>{const p=c.val();if(p&&p.uid)admPosts.push({id:c.key,...p});});
   if(annoncesSnap.exists()) annoncesSnap.forEach(c=>{const a=c.val();if(a)admAnnonces.push({id:c.key,...a});});
   admPosts.sort((a,b)=>b.createdAt-a.createdAt);
@@ -2333,7 +2340,10 @@ async function renameUserHandle(oldId, newId){
   userData.fullname=newId;
   userData.id=newId;
   ops.push(set(ref(db,`spk3/users/${newId}`),userData));
-  ops.push(remove(ref(db,`spk3/users/${oldId}`)));
+  // On garde une trace de redirection à l'ancienne place, pour que les
+  // sessions déjà connectées (localStorage) retrouvent le nouveau compte
+  // au prochain chargement au lieu d'être déconnectées.
+  ops.push(set(ref(db,`spk3/users/${oldId}`),{redirectTo:newId}));
 
   // 2. Posts : uid, uname, likes, commentaires
   const postsSnap=await get(ref(db,'spk3/posts'));
@@ -2520,7 +2530,7 @@ function renderAdmAnnonces(search=''){
         <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.brawlerName||a.brawler||'')}</div>
         <div style="font-size:.78rem;color:var(--text3)">@${esc(a.uid)} · 🏆 ${esc(String(a.trophFrom??''))} → ${esc(String(a.trophTo??''))}</div>
       </div>
-      <button data-del-annonce="${a.id}" title="Supprimer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>
+      <button data-del-annonce="${a.id}" title="Supprimer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:1.1rem;line-height:1;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
     </div>`).join('');
 
   $('adm-list').querySelectorAll('[data-goto-user]').forEach(el=>
@@ -2624,8 +2634,20 @@ async function boot(){
   const s=loadS();
   if(s?.id){
     try{
-      const snap=await get(ref(db,`spk3/users/${s.id}`));
-      if(snap.exists()){myId=s.id;myData=snap.val();bootApp();return;}
+      let id=s.id;
+      let snap=await get(ref(db,`spk3/users/${id}`));
+      // Suivre les redirections si le compte a été renommé par l'admin
+      let hops=0;
+      while(snap.exists() && snap.val()?.redirectTo && hops<10){
+        id=snap.val().redirectTo;
+        snap=await get(ref(db,`spk3/users/${id}`));
+        hops++;
+      }
+      if(snap.exists() && !snap.val()?.redirectTo){
+        myId=id;myData=snap.val();
+        if(id!==s.id) saveS();
+        bootApp();return;
+      }
     }catch(e){}
     clearS();
   }
