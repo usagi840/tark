@@ -1317,7 +1317,7 @@ async function showProfile(uid, fromMessages=false){
           </div>
           <!-- Pseudo -->
           <div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:2px" id="profile-fullname">
-            <span id="profile-fullname-text">${esc(isMe?(myData.fullname||myId):uid)}</span><span id="profile-badge"></span>
+            <span id="profile-fullname-text">${esc(isMe?(myData.fullname||myId):uid)}</span>
           </div>
           <div style="font-size:.82rem;color:var(--text2);margin-bottom:${isMe?'16px':'12px'}">@${esc(uid)}</div>
           ${!isMe?`<button id="btn-msg-profile" style="padding:9px 18px;border-radius:12px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(255,92,53,.3);margin-bottom:16px">💬 Envoyer un message</button>`:''}
@@ -1365,11 +1365,14 @@ async function showProfile(uid, fromMessages=false){
     const stv=$('stat-trophees-val');if(stv)stv.textContent=uData.statTrophees||'—';
     const srv=$('stat-ranked-val');if(srv)srv.textContent=uData.statRanked||'—';
   }
-  const pb=$('profile-badge');if(pb)pb.innerHTML=badgeHTML(uData.badge,18);
   if(isMe){
     const fn=$('profile-fullname-text');if(fn)fn.textContent=uData.fullname||uData.name||myId;
     myData.fullname=uData.fullname||myData.fullname;
-    myData.badge=uData.badge;
+    if(uData.avatar){
+      myData.avatar=uData.avatar;
+      const av=$('profile-avatar');if(av)av.src=esc(uData.avatar);
+      const topAv=$('top-av');if(topAv)topAv.src=esc(uData.avatar);
+    }
   }
 
   // Pickers stats (seulement si c'est son propre profil)
@@ -2200,20 +2203,16 @@ async function showSubs(uid,tab){
 
 // ── ADMIN ──────────────────────────────────────────────────
 const ADMIN_ID = 'alex';
-const BADGES = {
-  owner:{label:'Owner',img:'assets/owner.png'},
-  creator:{label:'Creator',img:'assets/creator.png'}
-};
+// Photos de profil exclusives que l'admin peut offrir aux membres
+const EXCLUSIVE_AVATARS=[
+  {id:'owner', name:'Owner', img:'assets/owner.png'},
+  {id:'creator', name:'Creator', img:'assets/creator.png'}
+];
 let admTab = 'users';
 let admUsers = [];
 let admPosts = [];
 let admAnnonces = [];
 let admListenersReady = false;
-
-function badgeHTML(badge, size=16){
-  if(!badge || !BADGES[badge]) return '';
-  return `<img src="${BADGES[badge].img}" title="${BADGES[badge].label}" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:middle;margin-left:4px" onerror="this.style.display='none'"/>`;
-}
 
 function initAdminListeners(){
   if(admListenersReady) return;
@@ -2228,12 +2227,9 @@ function initAdminListeners(){
     });
   });
   $('adm-search').addEventListener('input',()=>renderAdmTab($('adm-search').value.trim().toLowerCase()));
-  $('adm-refresh').addEventListener('click',()=>fetchAdminData());
 }
 
 async function fetchAdminData(){
-  $('adm-refresh').textContent='⟳';
-  $('adm-refresh').style.opacity='.5';
   const [usersSnap, postsSnap, annoncesSnap] = await Promise.all([
     get(ref(db,'spk3/users')),
     get(ref(db,'spk3/posts')),
@@ -2245,11 +2241,6 @@ async function fetchAdminData(){
   if(annoncesSnap.exists()) annoncesSnap.forEach(c=>{const a=c.val();if(a)admAnnonces.push({id:c.key,...a});});
   admPosts.sort((a,b)=>b.createdAt-a.createdAt);
   admAnnonces.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  $('adm-n-users').textContent=admUsers.length;
-  $('adm-n-posts').textContent=admPosts.length;
-  $('adm-n-annonces').textContent=admAnnonces.length;
-  $('adm-refresh').textContent='↺';
-  $('adm-refresh').style.opacity='1';
   renderAdmTab($('adm-search').value.trim().toLowerCase());
 }
 
@@ -2257,33 +2248,30 @@ async function loadAdmin(){
   if(myId!==ADMIN_ID) return;
   showPage('admin');
   $('page-admin').innerHTML=`
-    <div style="padding:14px 0">
-      <div class="admin-panel">
-        <div class="admin-topbar">
-          <span class="admin-badge">Admin</span>
-          <span class="admin-title">Panneau d'administration</span>
-          <button id="adm-refresh" title="Rafraîchir" style="background:none;border:none;color:white;font-size:1.1rem;cursor:pointer;opacity:.7">↺</button>
-        </div>
-        <div class="admin-stats-row">
-          <div class="admin-stat"><span class="n" id="adm-n-users">—</span><span class="l">Membres</span></div>
-          <div class="admin-stat"><span class="n" id="adm-n-posts">—</span><span class="l">Posts</span></div>
-          <div class="admin-stat"><span class="n" id="adm-n-annonces">—</span><span class="l">Annonces</span></div>
-        </div>
-        <div class="admin-tabs">
-          <button class="admin-tab active" data-adm-tab="users">Utilisateurs</button>
-          <button class="admin-tab" data-adm-tab="annonces">Annonces</button>
-          <button class="admin-tab" data-adm-tab="posts">Posts</button>
-        </div>
-        <div class="admin-content">
-          <input id="adm-search" class="admin-search" placeholder="Rechercher..."/>
-          <div id="adm-list"></div>
+    <div style="width:100%;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text)">Panneau Admin</div>
+
+      <!-- Recherche -->
+      <div style="position:relative">
+        <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="adm-search" placeholder="Rechercher..." style="width:100%;box-sizing:border-box;padding:13px 16px 13px 38px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'Outfit',sans-serif;font-size:.9rem;outline:none;box-shadow:var(--shadow);transition:border-color .18s"/>
+      </div>
+
+      <!-- Tabs -->
+      <div class="subs-section">
+        <div class="subs-tabs">
+          <button class="subs-tab active" data-adm-tab="users">Utilisateurs</button>
+          <button class="subs-tab" data-adm-tab="annonces">Annonces</button>
+          <button class="subs-tab" data-adm-tab="posts">Posts</button>
         </div>
       </div>
+
+      <div id="adm-list" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>`;
   // Reset tab to users on each open
   admTab='users';
   admListenersReady=false;
-  $('adm-list').innerHTML=`<div class="admin-empty" style="color:rgba(255,255,255,.3)">Chargement...</div>`;
+  $('adm-list').innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Chargement...</div>`;
   initAdminListeners();
   await fetchAdminData();
 }
@@ -2297,42 +2285,22 @@ function renderAdmTab(search=''){
 function renderAdmUsers(search=''){
   const filtered=admUsers.filter(u=>
     !search||(u.name||'').toLowerCase().includes(search)||((u.fullname||'').toLowerCase()).includes(search));
-  if(!filtered.length){$('adm-list').innerHTML=`<div class="admin-empty">Aucun membre trouvé</div>`;return;}
+  if(!filtered.length){$('adm-list').innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucun membre trouvé</div>`;return;}
   $('adm-list').innerHTML=filtered.map(u=>`
-    <div class="admin-user-row" data-profile="${esc(u.id)}" style="flex-wrap:wrap">
-      <img class="admin-uav" src="${esc(u.avatar||DEFAV)}" alt=""/>
-      <div class="admin-uinfo">
-        <div class="admin-uname">${esc(u.fullname||u.name)}${badgeHTML(u.badge)}${u.id===ADMIN_ID?' <span style="font-size:.6rem;background:linear-gradient(135deg,#ff5c35,#ff2d7a);color:white;padding:2px 7px;border-radius:10px;letter-spacing:.5px">ADMIN</span>':""}</div>
-        <div class="admin-uhandle">@${esc(u.name)} · ${u.createdAt?ago(u.createdAt)+' ago':'—'} · ${u.bio?esc(u.bio.slice(0,35))+'…':'Pas de bio'}</div>
+    <div class="convo-item" data-give-avatar="${esc(u.id)}" style="position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);cursor:pointer;box-shadow:var(--shadow);transition:all .15s">
+      <img src="${esc(u.avatar||DEFAV)}" style="width:44px;height:44px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.fullname||u.name)}${u.id===ADMIN_ID?' <span style="font-size:.6rem;background:linear-gradient(135deg,#ff5c35,#ff2d7a);color:white;padding:2px 7px;border-radius:10px;letter-spacing:.5px;vertical-align:middle">ADMIN</span>':''}</div>
+        <div style="font-size:.78rem;color:var(--text3)">@${esc(u.name)} · ${admPosts.filter(p=>p.uid===u.id).length} posts</div>
       </div>
-      <div class="admin-uposts">
-        <strong>${admPosts.filter(p=>p.uid===u.id).length}</strong>
-        <span style="font-size:.72rem;color:rgba(255,255,255,.35)">posts</span>
-      </div>
-      ${u.id!==ADMIN_ID?`<button class="admin-del-u" data-del-user="${esc(u.id)}" title="Supprimer ce compte">🗑</button>`:''}
-      <div data-adm-actions style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-left:50px">
-        <button class="admin-tab" data-rename="${esc(u.id)}" style="padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:.75rem">✏️ Renommer</button>
-        <button class="admin-tab" data-badge="${esc(u.id)}" data-badge-val="" style="padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:.75rem;${!u.badge?'color:var(--accent);border-color:var(--accent)':''}">Aucun badge</button>
-        <button class="admin-tab" data-badge="${esc(u.id)}" data-badge-val="owner" style="padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:.75rem;${u.badge==='owner'?'color:var(--accent);border-color:var(--accent)':''}">${badgeHTML('owner',14)} Owner</button>
-        <button class="admin-tab" data-badge="${esc(u.id)}" data-badge-val="creator" style="padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:.75rem;${u.badge==='creator'?'color:var(--accent);border-color:var(--accent)':''}">${badgeHTML('creator',14)} Creator</button>
-      </div>
+      <button data-rename="${esc(u.id)}" title="Renommer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--text2);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">✏️</button>
+      ${u.id!==ADMIN_ID?`<button data-del-user="${esc(u.id)}" title="Supprimer ce compte" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>`:''}
     </div>`).join('');
 
-  $('adm-list').querySelectorAll('[data-profile]').forEach(el=>
+  $('adm-list').querySelectorAll('[data-give-avatar]').forEach(el=>
     el.addEventListener('click',e=>{
-      if(e.target.closest('[data-del-user],[data-rename],[data-badge]')) return;
-      showProfile(el.dataset.profile);
-    }));
-
-  $('adm-list').querySelectorAll('[data-badge]').forEach(btn=>
-    btn.addEventListener('click',async e=>{
-      e.stopPropagation();
-      const uid=btn.dataset.badge;
-      const val=btn.dataset.badgeVal||null;
-      await update(ref(db,`spk3/users/${uid}`),{badge:val});
-      const u=admUsers.find(u=>u.id===uid); if(u) u.badge=val;
-      toast(`Badge mis à jour pour @${uid}`,'ok');
-      renderAdmTab($('adm-search').value.trim().toLowerCase());
+      if(e.target.closest('[data-del-user],[data-rename]')) return;
+      openAdminAvatarGift(el.dataset.giveAvatar);
     }));
 
   $('adm-list').querySelectorAll('[data-rename]').forEach(btn=>
@@ -2368,24 +2336,72 @@ function renderAdmUsers(search=''){
       toast(`@${uid} supprimé`,'ok');
       admUsers=admUsers.filter(u=>u.id!==uid);
       admPosts=admPosts.filter(p=>p.uid!==uid);
-      $('adm-n-users').textContent=admUsers.length;
-      $('adm-n-posts').textContent=admPosts.length;
       renderAdmTab($('adm-search').value.trim().toLowerCase());
     }));
+}
+
+// Ouvre un panneau plein écran listant les photos de profil exclusives.
+// Cliquer sur une photo l'attribue immédiatement au compte ciblé.
+function openAdminAvatarGift(uid){
+  const u=admUsers.find(u=>u.id===uid);
+  const page=document.createElement('div');
+  page.id='admin-avatar-gift-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="adm-gift-close" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;flex-shrink:0">←</button>
+      <div style="min-width:0">
+        <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Offrir une photo</div>
+        <div style="font-size:.78rem;color:var(--text3)">à @${esc(uid)}</div>
+      </div>
+    </div>
+    <div id="adm-gift-grid" style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start">
+      ${EXCLUSIVE_AVATARS.map(a=>`
+        <div data-avatar="${a.id}" class="emote-tile" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:12px 4px;border-radius:14px;border:2px solid ${u&&u.avatar===a.img?'var(--accent)':'transparent'};transition:all .15s;background:var(--card)">
+          <img src="${a.img}" style="width:56px;height:56px;object-fit:contain;border-radius:50%;background:var(--bg2)" onerror="this.style.opacity='.3'"/>
+          <span style="font-size:.72rem;font-weight:600;color:var(--text2);text-align:center">${esc(a.name)}</span>
+        </div>`).join('')}
+    </div>`;
+
+  document.body.appendChild(page);
+  page.querySelector('#adm-gift-close').addEventListener('click',()=>page.remove());
+
+  page.querySelectorAll('.emote-tile').forEach(tile=>{
+    tile.addEventListener('mouseenter',()=>{ tile.style.borderColor='var(--accent)'; tile.style.background='var(--accentbg)'; });
+    tile.addEventListener('mouseleave',()=>{
+      const a=EXCLUSIVE_AVATARS.find(x=>x.id===tile.dataset.avatar);
+      tile.style.borderColor=(u&&u.avatar===a.img)?'var(--accent)':'transparent';
+      tile.style.background='var(--card)';
+    });
+    tile.addEventListener('click', async()=>{
+      const a=EXCLUSIVE_AVATARS.find(x=>x.id===tile.dataset.avatar);
+      await update(ref(db,`spk3/users/${uid}`),{avatar:a.img});
+      if(u) u.avatar=a.img;
+      if(uid===myId){
+        myData.avatar=a.img;
+        const av=$('profile-avatar');if(av)av.src=a.img;
+        const topAv=$('top-av');if(topAv)topAv.src=a.img;
+      }
+      toast(`Photo "${a.name}" offerte à @${uid} !`,'ok');
+      renderAdmTab($('adm-search').value.trim().toLowerCase());
+      page.remove();
+    });
+  });
 }
 
 function renderAdmAnnonces(search=''){
   const filtered=admAnnonces.filter(a=>
     !search||(a.brawlerName||'').toLowerCase().includes(search)||(a.uid||'').toLowerCase().includes(search));
-  if(!filtered.length){$('adm-list').innerHTML=`<div class="admin-empty">Aucune annonce trouvée</div>`;return;}
+  if(!filtered.length){$('adm-list').innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucune annonce trouvée</div>`;return;}
   $('adm-list').innerHTML=filtered.map(a=>`
-    <div class="admin-post-row" data-goto-user="${esc(a.uid)}">
-      <img class="admin-thumb" src="assets/${esc(a.brawler||'')}_pin.png" style="object-fit:contain;background:rgba(255,255,255,.08)" onerror="this.style.opacity='.2'"/>
-      <div class="admin-post-info">
-        <div class="admin-post-by">@${esc(a.uid)} · ${a.createdAt?ago(a.createdAt):'—'}</div>
-        <div class="admin-post-cap">${esc(a.brawlerName||a.brawler||'')} · 🏆 ${esc(String(a.trophFrom??''))} → ${esc(String(a.trophTo??''))}</div>
+    <div class="convo-item" data-goto-user="${esc(a.uid)}" style="position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);cursor:pointer;box-shadow:var(--shadow)">
+      <img src="assets/${esc(a.brawler||'')}_pin.png" style="width:44px;height:44px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0" onerror="this.style.opacity='.2'"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.brawlerName||a.brawler||'')}</div>
+        <div style="font-size:.78rem;color:var(--text3)">@${esc(a.uid)} · 🏆 ${esc(String(a.trophFrom??''))} → ${esc(String(a.trophTo??''))}</div>
       </div>
-      <button class="admin-del-p" data-del-annonce="${a.id}" title="Supprimer">🗑</button>
+      <button data-del-annonce="${a.id}" title="Supprimer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>
     </div>`).join('');
 
   $('adm-list').querySelectorAll('[data-goto-user]').forEach(el=>
@@ -2399,7 +2415,6 @@ function renderAdmAnnonces(search=''){
       if(!confirm('Supprimer cette annonce ?')) return;
       await remove(ref(db,`spk3/annonces/${btn.dataset.delAnnonce}`));
       admAnnonces=admAnnonces.filter(a=>a.id!==btn.dataset.delAnnonce);
-      $('adm-n-annonces').textContent=admAnnonces.length;
       toast('Annonce supprimée','ok');
       renderAdmTab($('adm-search').value.trim().toLowerCase());
     }));
@@ -2408,19 +2423,18 @@ function renderAdmAnnonces(search=''){
 function renderAdmPosts(search=''){
   const filtered=admPosts.filter(p=>
     !search||(p.cap||'').toLowerCase().includes(search)||(p.uname||'').toLowerCase().includes(search));
-  if(!filtered.length){$('adm-list').innerHTML=`<div class="admin-empty">Aucune publication trouvée</div>`;return;}
+  if(!filtered.length){$('adm-list').innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucune publication trouvée</div>`;return;}
   $('adm-list').innerHTML=filtered.map(p=>{
     const nL=p.likes?Object.keys(p.likes).filter(k=>k!=='__init__').length:0;
     const nC=p.comments?Object.keys(p.comments).filter(k=>k!=='__init__').length:0;
     return `
-    <div class="admin-post-row" data-goto-user="${esc(p.uid)}">
-      <div class="admin-thumb">${p.img ? '<img src="' + p.img + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px" alt=""/>' : '<span>📝</span>'}</div>
-      <div class="admin-post-info">
-        <div class="admin-post-by">@${esc(p.uid)} · ${ago(p.createdAt)}</div>
-        <div class="admin-post-cap">${p.cap?esc(p.cap):'<em style="opacity:.3">Sans légende</em>'}</div>
+    <div class="convo-item" data-goto-user="${esc(p.uid)}" style="position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--card);cursor:pointer;box-shadow:var(--shadow)">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--bg2);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden">${p.img?`<img src="${p.img}" style="width:100%;height:100%;object-fit:cover"/>`:'📝'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.cap?esc(p.cap):'<em style="opacity:.4">Sans légende</em>'}</div>
+        <div style="font-size:.78rem;color:var(--text3)">@${esc(p.uid)} · ♥ ${nL} · 💬 ${nC}</div>
       </div>
-      <div class="admin-post-meta">♥ ${nL}<br>💬 ${nC}</div>
-      <button class="admin-del-p" data-del-post="${p.id}" title="Supprimer">🗑</button>
+      <button data-del-post="${p.id}" title="Supprimer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>
     </div>`;
   }).join('');
 
@@ -2435,7 +2449,6 @@ function renderAdmPosts(search=''){
       if(!confirm('Supprimer cette publication ?')) return;
       await remove(ref(db,`spk3/posts/${btn.dataset.delPost}`));
       admPosts=admPosts.filter(p=>p.id!==btn.dataset.delPost);
-      $('adm-n-posts').textContent=admPosts.length;
       toast('Publication supprimée','ok');
       renderAdmTab($('adm-search').value.trim().toLowerCase());
     }));
