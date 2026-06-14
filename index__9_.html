@@ -2319,6 +2319,118 @@ function renderAdmTab(search=''){
   else renderAdmCollection(search);
 }
 
+// Renomme entièrement le @pseudo (= clé) d'un utilisateur, et met à jour
+// toutes les références : posts (uid, uname, likes, commentaires),
+// annonces, abonnements (follows), conversations (convos) et messages (msgs).
+async function renameUserHandle(oldId, newId){
+  const ops=[];
+
+  // 1. Compte utilisateur
+  const userSnap=await get(ref(db,`spk3/users/${oldId}`));
+  if(!userSnap.exists()) throw new Error('Utilisateur introuvable');
+  const userData=userSnap.val();
+  userData.name=newId;
+  userData.fullname=newId;
+  userData.id=newId;
+  ops.push(set(ref(db,`spk3/users/${newId}`),userData));
+  ops.push(remove(ref(db,`spk3/users/${oldId}`)));
+
+  // 2. Posts : uid, uname, likes, commentaires
+  const postsSnap=await get(ref(db,'spk3/posts'));
+  if(postsSnap.exists()){
+    postsSnap.forEach(postChild=>{
+      const p=postChild.val(); if(!p) return;
+      const pid=postChild.key;
+      if(p.uid===oldId){
+        ops.push(update(ref(db,`spk3/posts/${pid}`),{uid:newId,uname:newId}));
+      }
+      if(p.likes && p.likes[oldId]!==undefined){
+        ops.push(set(ref(db,`spk3/posts/${pid}/likes/${newId}`),p.likes[oldId]));
+        ops.push(remove(ref(db,`spk3/posts/${pid}/likes/${oldId}`)));
+      }
+      if(p.comments){
+        Object.entries(p.comments).forEach(([ck,cv])=>{
+          if(cv && cv.uid===oldId){
+            ops.push(update(ref(db,`spk3/posts/${pid}/comments/${ck}`),{uid:newId,uname:newId}));
+          }
+        });
+      }
+    });
+  }
+
+  // 3. Annonces
+  const annSnap=await get(ref(db,'spk3/annonces'));
+  if(annSnap.exists()){
+    annSnap.forEach(annChild=>{
+      const a=annChild.val(); if(!a) return;
+      if(a.uid===oldId) ops.push(update(ref(db,`spk3/annonces/${annChild.key}`),{uid:newId}));
+    });
+  }
+
+  // 4. Abonnements (follows)
+  const followsSnap=await get(ref(db,'spk3/follows'));
+  if(followsSnap.exists()){
+    followsSnap.forEach(userFollows=>{
+      const key=userFollows.key;
+      const val=userFollows.val();
+      if(key===oldId){
+        // Déplacer la liste de ce que oldId suivait
+        ops.push(set(ref(db,`spk3/follows/${newId}`),val));
+        ops.push(remove(ref(db,`spk3/follows/${oldId}`)));
+        return;
+      }
+      if(val && val[oldId]!==undefined){
+        // Quelqu'un d'autre suivait oldId -> renommer la clé
+        ops.push(set(ref(db,`spk3/follows/${key}/${newId}`),val[oldId]));
+        ops.push(remove(ref(db,`spk3/follows/${key}/${oldId}`)));
+      }
+    });
+  }
+
+  // 5. Conversations (convos)
+  const convosSnap=await get(ref(db,'spk3/convos'));
+  if(convosSnap.exists()){
+    convosSnap.forEach(userConvos=>{
+      const key=userConvos.key;
+      const val=userConvos.val();
+      if(key===oldId){
+        // Déplacer toutes les conversations de oldId
+        ops.push(set(ref(db,`spk3/convos/${newId}`),val));
+        ops.push(remove(ref(db,`spk3/convos/${oldId}`)));
+        return;
+      }
+      if(val && val[oldId]){
+        // Mettre à jour la conversation que cet autre user a avec oldId
+        const entry={...val[oldId],uid:newId};
+        ops.push(set(ref(db,`spk3/convos/${key}/${newId}`),entry));
+        ops.push(remove(ref(db,`spk3/convos/${key}/${oldId}`)));
+      }
+    });
+  }
+
+  // 6. Messages (msgs) : le cid contient le pseudo, et chaque message a un champ "from"
+  const msgsSnap=await get(ref(db,'spk3/msgs'));
+  if(msgsSnap.exists()){
+    msgsSnap.forEach(cidChild=>{
+      const cid=cidChild.key;
+      const parts=cid.split('__');
+      if(parts.length===2 && parts.includes(oldId)){
+        const other=parts[0]===oldId?parts[1]:parts[0];
+        const newCid=convoId(newId,other);
+        const messages=cidChild.val()||{};
+        const updated={};
+        Object.entries(messages).forEach(([mk,mv])=>{
+          updated[mk]=(mv && mv.from===oldId)?{...mv,from:newId}:mv;
+        });
+        ops.push(set(ref(db,`spk3/msgs/${newCid}`),updated));
+        if(newCid!==cid) ops.push(remove(ref(db,`spk3/msgs/${cid}`)));
+      }
+    });
+  }
+
+  await Promise.all(ops);
+}
+
 function renderAdmUsers(search=''){
   const filtered=admUsers.filter(u=>
     !search||(u.name||'').toLowerCase().includes(search)||((u.fullname||'').toLowerCase()).includes(search));
@@ -2330,8 +2442,13 @@ function renderAdmUsers(search=''){
         <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.fullname||u.name)}</div>
         <div style="font-size:.78rem;color:var(--text3)">@${esc(u.name)} · ${admAnnonces.filter(a=>a.uid===u.id).length} annonces</div>
       </div>
-      <button data-rename="${esc(u.id)}" title="Renommer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--text2);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">✏️</button>
-      ${u.id!==ADMIN_ID?`<button data-del-user="${esc(u.id)}" title="Supprimer ce compte" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>`:''}
+      <button data-rename="${esc(u.id)}" title="Renommer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--text2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+      ${u.id!==ADMIN_ID?`<button data-del-user="${esc(u.id)}" title="Supprimer ce compte" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:1.1rem;line-height:1;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>`:''}
     </div>`).join('');
 
   $('adm-list').querySelectorAll('[data-open-user]').forEach(el=>
@@ -2343,18 +2460,33 @@ function renderAdmUsers(search=''){
   $('adm-list').querySelectorAll('[data-rename]').forEach(btn=>
     btn.addEventListener('click',async e=>{
       e.stopPropagation();
-      const uid=btn.dataset.rename;
-      const u=admUsers.find(u=>u.id===uid);
-      const current=u?.fullname||u?.name||uid;
-      const newName=prompt(`Nouveau pseudo affiché pour @${uid} :`, current);
-      if(newName===null) return;
-      const trimmed=newName.trim();
-      if(!trimmed){ toast('Pseudo invalide','err'); return; }
-      await update(ref(db,`spk3/users/${uid}`),{fullname:trimmed});
-      if(u) u.fullname=trimmed;
-      if(uid===myId){ myData.fullname=trimmed; saveS(); }
-      toast(`Pseudo de @${uid} mis à jour`,'ok');
-      renderAdmTab($('adm-search').value.trim().toLowerCase());
+      const oldId=btn.dataset.rename;
+      if(oldId===ADMIN_ID){ toast("Tu ne peux pas renommer le compte admin (cela bloquerait l'accès au panneau)",'err'); return; }
+      const u=admUsers.find(u=>u.id===oldId);
+      const current=u?.name||oldId;
+      const input=prompt(`Nouveau pseudo (@) pour @${oldId} :`, current);
+      if(input===null) return;
+      const newId=input.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+      if(!newId){ toast('Pseudo invalide','err'); return; }
+      if(newId===oldId) return;
+      // Vérifier que le nouveau pseudo n'est pas déjà pris
+      const existSnap=await get(ref(db,`spk3/users/${newId}`));
+      if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
+      if(!confirm(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`)) return;
+      toast('Renommage en cours...');
+      try{
+        await renameUserHandle(oldId,newId);
+      }catch(err){
+        toast('Erreur : '+(err?.message||err),'err');
+        return;
+      }
+      if(u){ u.id=newId; u.name=newId; u.fullname=newId; }
+      if(oldId===myId){
+        myId=newId; myData.name=newId; myData.fullname=newId; saveS();
+        if($('shandle'))$('shandle').textContent='@'+myId;
+      }
+      toast(`@${oldId} renommé en @${newId}`,'ok');
+      await fetchAdminData();
     }));
 
   $('adm-list').querySelectorAll('[data-del-user]').forEach(btn=>
