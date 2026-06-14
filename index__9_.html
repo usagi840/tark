@@ -2328,7 +2328,7 @@ function renderAdmUsers(search=''){
       <img src="${esc(u.avatar||DEFAV)}" style="width:44px;height:44px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.fullname||u.name)}</div>
-        <div style="font-size:.78rem;color:var(--text3)">@${esc(u.name)} · ${admPosts.filter(p=>p.uid===u.id).length} posts</div>
+        <div style="font-size:.78rem;color:var(--text3)">@${esc(u.name)} · ${admAnnonces.filter(a=>a.uid===u.id).length} annonces</div>
       </div>
       <button data-rename="${esc(u.id)}" title="Renommer" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--text2);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">✏️</button>
       ${u.id!==ADMIN_ID?`<button data-del-user="${esc(u.id)}" title="Supprimer ce compte" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);color:var(--red);cursor:pointer;font-size:.9rem;flex-shrink:0;display:flex;align-items:center;justify-content:center">🗑</button>`:''}
@@ -2461,16 +2461,27 @@ function openAdminCollectionPicker(uid){
 
   page.querySelectorAll('.emote-tile').forEach(tile=>{
     const f=FAME_ICONS.find(x=>x.id===tile.dataset.fame);
-    tile.addEventListener('mouseenter',()=>{ if(!owned[f.id]){ tile.style.borderColor='var(--accent)'; tile.style.background='var(--accentbg)'; } });
-    tile.addEventListener('mouseleave',()=>{ if(!owned[f.id]){ tile.style.borderColor='transparent'; tile.style.background='var(--card)'; } });
+    tile.addEventListener('mouseenter',()=>{ tile.style.background='var(--accentbg)'; tile.style.borderColor='var(--accent)'; });
+    tile.addEventListener('mouseleave',()=>{ tile.style.background='var(--card)'; tile.style.borderColor=owned[f.id]?'var(--accent)':'transparent'; });
     tile.addEventListener('click', async()=>{
-      if(owned[f.id]){ toast(`@${uid} possède déjà "${f.name}"`,'err'); return; }
-      await update(ref(db,`spk3/users/${uid}/collection`),{[f.id]:true});
-      if(u){ u.collection=u.collection||{}; u.collection[f.id]=true; }
-      owned[f.id]=true;
-      const span=tile.querySelector('span:last-child'); if(span) span.textContent='Possédée';
-      tile.style.borderColor='var(--accent)';
-      toast(`Icône "${f.name}" ajoutée à la collection de @${uid} !`,'ok');
+      const span=tile.querySelector('span:last-child');
+      if(owned[f.id]){
+        // Retirer de la collection
+        await remove(ref(db,`spk3/users/${uid}/collection/${f.id}`));
+        if(u&&u.collection) delete u.collection[f.id];
+        owned[f.id]=false;
+        if(span) span.textContent='';
+        tile.style.borderColor='transparent';
+        toast(`Icône "${f.name}" retirée de la collection de @${uid}`,'ok');
+      }else{
+        // Ajouter à la collection
+        await update(ref(db,`spk3/users/${uid}/collection`),{[f.id]:true});
+        if(u){ u.collection=u.collection||{}; u.collection[f.id]=true; }
+        owned[f.id]=true;
+        if(span) span.textContent='Possédée';
+        tile.style.borderColor='var(--accent)';
+        toast(`Icône "${f.name}" ajoutée à la collection de @${uid} !`,'ok');
+      }
       renderAdmTab($('adm-search').value.trim().toLowerCase());
     });
   });
