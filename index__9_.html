@@ -1956,7 +1956,7 @@ async function openAvatarPicker(){
 
   page.innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
-      <button id="av-picker-close" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;flex-shrink:0">←</button>
+      <button id="av-picker-close" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
       <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Choisir ton brawler</div>
     </div>
     <div style="position:relative;padding:12px 16px 8px;flex-shrink:0">
@@ -1965,14 +1965,22 @@ async function openAvatarPicker(){
     </div>
     <div style="flex:1;overflow-y:auto;padding:4px 16px 40px">
       ${owned.length?`
-      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:8px 0 8px;text-transform:uppercase;letter-spacing:.5px">Ta collection</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-        ${owned.map(f=>`
-          <div data-fame="${f.id}" class="emote-tile" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:10px 4px;border-radius:14px;border:2px solid ${myData.avatar===f.img?'var(--accent)':'transparent'};transition:all .15s;background:var(--card)">
-            <img src="${f.img}" style="width:52px;height:52px;object-fit:contain;border-radius:50%;background:var(--bg2)" onerror="this.style.opacity='.3'"/>
-            <span style="font-size:.62rem;font-weight:600;color:var(--text2);text-align:center;line-height:1.2;word-break:break-word;width:100%">${esc(f.name)}</span>
-          </div>`).join('')}
-      </div>
+      ${(()=>{
+        const ownedGloires=owned.filter(f=>GLOIRE_IDS.includes(f.id));
+        const ownedStarr=owned.filter(f=>!GLOIRE_IDS.includes(f.id));
+        let html='';
+        if(ownedGloires.length) html+=`
+          <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:8px 0 8px;text-transform:uppercase;letter-spacing:.5px">Gloires</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+            ${ownedGloires.map(f=>fameTileHTML(f, myData.avatar===f.img)).join('')}
+          </div>`;
+        if(ownedStarr.length) html+=`
+          <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:8px 0 8px;text-transform:uppercase;letter-spacing:.5px">Prix Starr</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+            ${ownedStarr.map(f=>fameTileHTML(f, myData.avatar===f.img)).join('')}
+          </div>`;
+        return html;
+      })()}
       <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:8px 0 8px;text-transform:uppercase;letter-spacing:.5px">Brawlers</div>
       `:''}
       <div id="av-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start">
@@ -2264,6 +2272,14 @@ const FAME_ICONS=[
   {id:'starrphew', name:'Starr Ouf', img:'starr/starr_pin_phew.png'},
   {id:'starrspecial', name:'Starr Spécial', img:'starr/starr_pin_special.png'}
 ];
+const GLOIRE_IDS=['mondiale','lunaire','martienne','saturnale','solaire','meteorique','alienne','forcestarr'];
+function fameTileHTML(f, isSelected, extra=''){
+  return `<div data-fame="${f.id}" class="emote-tile" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:10px 4px;border-radius:14px;border:2px solid ${isSelected?'var(--accent)':'transparent'};transition:all .15s;background:var(--card)">
+    <img src="${f.img}" style="width:52px;height:52px;object-fit:contain;border-radius:50%;background:var(--bg2)" onerror="this.style.opacity='.3'"/>
+    <span style="font-size:.62rem;font-weight:600;color:var(--text2);text-align:center;line-height:1.2;word-break:break-word;width:100%">${esc(f.name)}</span>
+    ${extra}
+  </div>`;
+}
 let admTab = 'users';
 let admUsers = [];
 let admPosts = [];
@@ -2595,19 +2611,25 @@ function openAdminCollectionPicker(uid){
 
   page.innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
-      <button id="adm-coll-close" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;flex-shrink:0">←</button>
+      <button id="adm-coll-close" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
       <div style="min-width:0">
         <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Ajouter à la collection</div>
         <div style="font-size:.78rem;color:var(--text3)">de @${esc(uid)}</div>
       </div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start">
-      ${FAME_ICONS.map(f=>`
-        <div data-fame="${f.id}" class="emote-tile" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:12px 4px;border-radius:14px;border:2px solid ${owned[f.id]?'var(--accent)':'transparent'};transition:all .15s;background:var(--card)">
-          <img src="${f.img}" style="width:56px;height:56px;object-fit:contain;border-radius:50%;background:var(--bg2)" onerror="this.style.opacity='.3'"/>
-          <span style="font-size:.72rem;font-weight:600;color:var(--text2);text-align:center">${esc(f.name)}</span>
-          <span style="font-size:.65rem;color:var(--accent);font-weight:700">${owned[f.id]?'Possédée':''}</span>
-        </div>`).join('')}
+    <div style="flex:1;overflow-y:auto;padding:16px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px">Gloires</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start;margin-bottom:20px">
+        ${FAME_ICONS.filter(f=>GLOIRE_IDS.includes(f.id)).map(f=>
+          fameTileHTML(f, owned[f.id], `<span style="font-size:.65rem;color:var(--accent);font-weight:700">${owned[f.id]?'Possédée':''}</span>`)
+        ).join('')}
+      </div>
+      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px">Prix Starr</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start">
+        ${FAME_ICONS.filter(f=>!GLOIRE_IDS.includes(f.id)).map(f=>
+          fameTileHTML(f, owned[f.id], `<span style="font-size:.65rem;color:var(--accent);font-weight:700">${owned[f.id]?'Possédée':''}</span>`)
+        ).join('')}
+      </div>
     </div>`;
 
   document.body.appendChild(page);
