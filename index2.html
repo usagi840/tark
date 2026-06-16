@@ -2679,16 +2679,7 @@ function openAdminCollectionPicker(uid){
 
 // ── BOOT ───────────────────────────────────────────────────
 async function boot(){
-  // Reprendre la vérification si elle était en cours
-  const savedVerify = (()=>{ try{ const s=sessionStorage.getItem('verifyState'); return s?JSON.parse(s):null; }catch(e){return null;} })();
-  if(savedVerify && savedVerify.step > 1){
-    // On boot normalement puis on rouvre la page de vérification
-    setTimeout(()=>{
-      if(verifyState.step > 1 && !myData.bsVerified){
-        openVerifyModal();
-      }
-    }, 500);
-  }
+
   const s=loadS();
   if(s?.id){
     try{
@@ -2757,11 +2748,12 @@ async function refreshBsStats(){
 
 function openVerifyModal(){
   if(myData.bsVerified){ toast('Compte déjà vérifié ✅','ok'); return; }
-  // Si pas de state sauvegardé, réinitialiser
-  if(!verifyState.step || verifyState.step===0){
+  // Si pas de state sauvegardé ou step=0, réinitialiser
+  if(!verifyState || !verifyState.step || verifyState.step===0){
     verifyState={step:1,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null};
     clearVerifyState();
   }
+  // Sinon on reprend là où on était (verifyState déjà chargé depuis sessionStorage)
 
   const page=document.createElement('div');
   page.id='verify-page';
