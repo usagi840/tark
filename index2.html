@@ -2679,6 +2679,16 @@ function openAdminCollectionPicker(uid){
 
 // ── BOOT ───────────────────────────────────────────────────
 async function boot(){
+  // Reprendre la vérification si elle était en cours
+  const savedVerify = (()=>{ try{ const s=sessionStorage.getItem('verifyState'); return s?JSON.parse(s):null; }catch(e){return null;} })();
+  if(savedVerify && savedVerify.step > 1){
+    // On boot normalement puis on rouvre la page de vérification
+    setTimeout(()=>{
+      if(verifyState.step > 1 && !myData.bsVerified){
+        openVerifyModal();
+      }
+    }, 500);
+  }
   const s=loadS();
   if(s?.id){
     try{
@@ -2706,7 +2716,14 @@ async function boot(){
 
 const BS_ICONS_POOL = [28000000,28000001,28000002,28000003,28000004,28000005,28000006,28000007,28000008,28000009,28000010,28000011,28000012,28000013,28000014,28000015,28000016,28000017,28000018,28000019,28000020,28000021,28000022,28000023,28000024,28000025,28000026,28000027,28000028,28000029,28000030,28000031,28000032,28000033,28000034,28000035,28000036,28000037,28000038,28000039,28000040,28000041,28000042,28000043,28000044,28000045,28000046,28000047,28000048,28000049,28000050,28000051,28000052,28000053,28000054,28000055,28000056,28000057,28000058,28000059,28000060,28000061,28000062,28000063,28000064,28000065];
 
-let verifyState = { step:0, tag:'', iconBefore:null, targetIcon1:null, targetIcon2:null };
+let verifyState = (()=>{
+  try{
+    const s=sessionStorage.getItem('verifyState');
+    return s?JSON.parse(s):{step:0,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null};
+  }catch(e){ return {step:0,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null}; }
+})();
+function saveVerifyState(){ try{ sessionStorage.setItem('verifyState',JSON.stringify(verifyState)); }catch(e){} }
+function clearVerifyState(){ try{ sessionStorage.removeItem('verifyState'); }catch(e){} }
 
 async function fetchBsPlayer(tag){
   const clean = (tag.startsWith("#")?tag.slice(1):tag).toUpperCase();
@@ -2740,7 +2757,11 @@ async function refreshBsStats(){
 
 function openVerifyModal(){
   if(myData.bsVerified){ toast('Compte déjà vérifié ✅','ok'); return; }
-  verifyState={step:1,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null};
+  // Si pas de state sauvegardé, réinitialiser
+  if(!verifyState.step || verifyState.step===0){
+    verifyState={step:1,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null};
+    clearVerifyState();
+  }
 
   const page=document.createElement('div');
   page.id='verify-page';
@@ -2795,7 +2816,9 @@ function renderVerifyStep(){
         verifyState.tag=tag;
         verifyState.iconBefore=player.icon?.id??null;
         verifyState.targetIcon1=pickRandomIcon([verifyState.iconBefore]);
+        saveVerifyState();
         verifyState.step=2;
+        saveVerifyState();
         renderVerifyStep();
       }catch(e){
         err.textContent='Joueur introuvable. Vérifie ton tag.';
@@ -2827,7 +2850,9 @@ function renderVerifyStep(){
         if(player.icon?.id===verifyState.targetIcon1){
           verifyState.iconBefore=player.icon.id;
           verifyState.targetIcon2=pickRandomIcon([verifyState.targetIcon1]);
+          saveVerifyState();
           verifyState.step=3;
+          saveVerifyState();
           renderVerifyStep();
         }else{
           err.textContent="Icône incorrecte. Vérifie que tu l'as bien équipée dans le jeu.";
@@ -2871,6 +2896,7 @@ function renderVerifyStep(){
           myData.bsVerified=true;
           myData.statTrophees=String(trophies);
           myData.statRanked=String(ranked);
+          clearVerifyState();
           document.getElementById('verify-page')?.remove();
           toast('Compte Brawl Stars vérifié ! 🎉','ok');
           showProfile(myId);
