@@ -2818,7 +2818,7 @@ function renderVerifyStep(){
       <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Ouvre Brawl Stars → Ton profil → Icône de joueur → Cherche l'ID <strong>${verifyState.targetIcon1}</strong> → Équipe-la → Reviens ici</div>
       </div>`;
-    btn.textContent='J'ai équipé l'icône ✓';
+    btn.textContent="J'ai équipé l'icône ✓";
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='Vérification…';
       try{
@@ -2829,10 +2829,10 @@ function renderVerifyStep(){
           verifyState.step=3;
           renderVerifyStep();
         }else{
-          err.textContent='Icône incorrecte. Vérifie que tu l'as bien équipée dans le jeu.';
-          btn.disabled=false; btn.textContent='J'ai équipé l'icône ✓';
+          err.textContent="Icône incorrecte. Vérifie que tu l'as bien équipée dans le jeu.";
+          btn.disabled=false; btn.textContent="J'ai équipé l'icône ✓";
         }
-      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent='J'ai équipé l'icône ✓'; }
+      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent="J'ai équipé l'icône ✓"; }
     };
   }
 
