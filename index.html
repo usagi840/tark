@@ -2746,7 +2746,7 @@ async function refreshBsStats(){
   try{
     const player = await fetchBsPlayer(myData.bsTag);
     const trophies = player.trophies ?? myData.statTrophees;
-    const ranked = player.soloRank ?? player.currentSoloRank ?? myData.statRanked;
+    const ranked = player.rankedRankName ?? player.rankedRank ?? myData.statRanked;
     await update(ref(db,`spk3/users/${myId}`),{
       statTrophees: String(trophies),
       statRanked: ranked ? String(ranked) : myData.statRanked
@@ -2886,7 +2886,7 @@ function renderVerifyStep(){
         const player=await fetchBsPlayer(verifyState.tag);
         if(player.icon?.id===verifyState.targetIcon2){
           const trophies=player.trophies??'—';
-          const ranked=player.soloRank??player.currentSoloRank??'—';
+          const ranked=player.rankedRankName??'—';
           await update(ref(db,`spk3/users/${myId}`),{
             bsTag:verifyState.tag,
             bsVerified:true,
