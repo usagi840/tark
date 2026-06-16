@@ -2844,7 +2844,13 @@ function renderVerifyStep(){
       <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:.82rem;color:var(--text2);line-height:1.6">Ouvre Brawl Stars → Ton profil → Icône de joueur → Équipe l'icône ci-dessus → Reviens ici</div>
       </div>`;
-    btn.textContent="J'ai équipé l'icône ✓";
+      <button id="verify-reroll" style="width:100%;padding:10px;margin-top:10px">Je n'ai pas cette icone</button>
+    document.getElementById('verify-reroll')?.addEventListener('click',()=>{
+    verifyState.targetIcon1=pickRandomIcon([verifyState.iconBefore,verifyState.targetIcon1]);
+    saveVerifyState();
+    renderVerifyStep();
+  });
+    btn.textContent="J'ai équipé l'icône";
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='Vérification…';
       try{
@@ -2879,7 +2885,13 @@ function renderVerifyStep(){
       <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
         <div style="font-size:.82rem;color:var(--text2);line-height:1.6">Même chose : équipe l'icône ci-dessus dans Brawl Stars puis reviens ici</div>
       </div>`;
-    btn.textContent='Valider mon compte ✓';
+      <button id="verify-reroll" style="width:100%;padding:10px;margin-top:10px">Je n'ai pas cette icone</button>
+    document.getElementById('verify-reroll')?.addEventListener('click',()=>{
+    verifyState.targetIcon2=pickRandomIcon([verifyState.targetIcon1,verifyState.targetIcon2]);
+    saveVerifyState();
+    renderVerifyStep();
+  });
+    btn.textContent='Valider mon compte';
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='Finalisation…';
       try{
