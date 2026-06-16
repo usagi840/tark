@@ -2812,11 +2812,12 @@ function renderVerifyStep(){
         <div style="font-size:.85rem;color:var(--text2)">Dans Brawl Stars, va dans <strong>Profil → Icône</strong> et équipe :</div>
       </div>
       <div style="background:var(--accentbg);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
-        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ID de l'icône à équiper</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">${verifyState.targetIcon1}</div>
+        <img src="https://cdn.brawlstats.com/player-thumbnails/${verifyState.targetIcon1}.png" onerror="this.style.display='none'" style="width:80px;height:80px;object-fit:contain;margin:0 auto 12px;display:block"/>
+        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Icône à équiper</div>
+        <div style="font-size:1.4rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">#${verifyState.targetIcon1}</div>
       </div>
       <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
-        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Ouvre Brawl Stars → Ton profil → Icône de joueur → Cherche l'ID <strong>${verifyState.targetIcon1}</strong> → Équipe-la → Reviens ici</div>
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Ouvre Brawl Stars → Ton profil → Icône de joueur → Équipe l'icône ci-dessus → Reviens ici</div>
       </div>`;
     btn.textContent="J'ai équipé l'icône ✓";
     btn.onclick=async()=>{
@@ -2845,11 +2846,12 @@ function renderVerifyStep(){
         <div style="font-size:.85rem;color:var(--text2)">Équipe une dernière icône pour confirmer</div>
       </div>
       <div style="background:var(--accentbg);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
-        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ID de l'icône à équiper</div>
-        <div style="font-size:2rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">${verifyState.targetIcon2}</div>
+        <img src="https://cdn.brawlstats.com/player-thumbnails/${verifyState.targetIcon2}.png" onerror="this.style.display='none'" style="width:80px;height:80px;object-fit:contain;margin:0 auto 12px;display:block"/>
+        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Icône à équiper</div>
+        <div style="font-size:1.4rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">#${verifyState.targetIcon2}</div>
       </div>
       <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
-        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Même chose : équipe l'icône <strong>${verifyState.targetIcon2}</strong> dans Brawl Stars puis reviens ici</div>
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Même chose : équipe l'icône ci-dessus dans Brawl Stars puis reviens ici</div>
       </div>`;
     btn.textContent='Valider mon compte ✓';
     btn.onclick=async()=>{
