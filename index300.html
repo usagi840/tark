@@ -746,10 +746,11 @@ function showQuetes(){
 }
 
 const QUEST_DEFS=[
-  {id:'mondiale',  title:'Collectionneur',  desc:'Débloque tous les brawlers', minPower:0},
-  {id:'lunaire',   title:'Power 7',         desc:'Passe tous tes brawlers en Power 7',  minPower:7},
-  {id:'martienne', title:'Power 9',         desc:'Passe tous tes brawlers en Power 9',  minPower:9},
-  {id:'saturnale', title:'Power 11',        desc:'Passe tous tes brawlers en Power 11', minPower:11},
+  {id:'mondiale',  title:'Collectionneur',  desc:'Débloque 100 brawlers', type:'count'},
+  {id:'lunaire',   title:'Power 7',         desc:'Passe 100 brawlers en Power 7',  type:'power', minPower:7},
+  {id:'martienne', title:'Power 9',         desc:'Passe 100 brawlers en Power 9',  type:'power', minPower:9},
+  {id:'saturnale', title:'Power 11',        desc:'Passe 100 brawlers en Power 11', type:'power', minPower:11},
+  {id:'solaire',   title:'Gloire Solaire',  desc:"Débloque l'Hypercharge de 100 brawlers", type:'hyper'},
 ];
 
 async function loadQuetes(){
@@ -762,10 +763,14 @@ async function loadQuetes(){
     ]);
     const owned = collSnap.exists()?collSnap.val():{};
     const brawlers = player.brawlers||[];
-    const total = BRAWLERS.length;
+    const total = 100;
     renderQuetes(QUEST_DEFS.map(q=>{
-      const progress = q.minPower===0 ? brawlers.length : brawlers.filter(b=>(b.power||0)>=q.minPower).length;
-      return {...q, progress, total, done:progress>=total, claimed:!!owned[q.id]};
+      let raw;
+      if(q.type==='count') raw=brawlers.length;
+      else if(q.type==='power') raw=brawlers.filter(b=>(b.power||0)>=q.minPower).length;
+      else raw=brawlers.filter(b=>(b.hypercharge||b.hyperchargeLevel||0)>0).length;
+      const progress=Math.min(raw,total);
+      return {...q, progress, total, done:raw>=total, claimed:!!owned[q.id]};
     }));
   }catch(e){
     list.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Impossible de charger tes quêtes. Réessaie plus tard.</div>`;
