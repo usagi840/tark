@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Brawl Match</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #090a0f;
+      --bg2: #121420;
+      --bg3: #1a1d30;
+      --accent: #5e35b1;
+      --accent-rgb: 94, 53, 177;
+      --accent2: #3949ab;
+      --text: #ffffff;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --border: #1e293b;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --safe: safe-area-inset-bottom;
+    }
+    * {
+      box-sizing: border-box; 
+      margin: 0; padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--bg);
+      position: relative;
+    }
+    #main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: calc(70px + env(safe-area-inset-bottom));
+      -webkit-overflow-scrolling: touch;
+    }
+    .page {
+      padding: 16px;
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    
+    #nav-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: calc(64px + env(safe-area-inset-bottom));
+      background: rgba(18, 20, 32, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text3);
+      cursor: pointer;
+      flex: 1;
+      padding: 8px 0;
+      transition: all 0.2s;
+      gap: 4px;
+    }
+    .nav-item svg {
+      width: 22px; height: 22px;
+      transition: transform 0.2s;
+      stroke-width: 2.2;
+    }
+    .nav-item span { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+    .nav-item.active { color: var(--text); }
+    .nav-item.active svg { transform: translateY(-2px); color: #fff; }
+    
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-sec { background: var(--bg3); border: 1px solid var(--border); color: var(--text); }
+    
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    
+    #toast-container {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 360px;
+    }
+    .toast {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .toast.ok { border-left: 4px solid var(--success); }
+    .toast.err { border-left: 4px solid var(--error); }
+    
+    .header-app {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 16px 8px 16px;
+    }
+    .header-app h1 { font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--text3)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .badge-brawler {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg3);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+    }
+    
+    .annonce-brawler.selected {
+      border-color: var(--accent) !important;
+      background: rgba(var(--accent-rgb), 0.15) !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header-app">
+    <h1 id="app-title-main">Brawl Match</h1>
+    <div id="header-actions" style="display:flex;gap:8px"></div>
+  </div>
+  
+  <div id="main-content">
+    <!-- PAGE: RECHERCHE / ANNONCES -->
+    <div id="page-recherche" class="page active">
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div style="position:relative;flex:1">
+          <select id="filter-brawler" style="padding-left:36px;font-weight:600;appearance:none">
+            <option value="">Tous les brawlers</option>
+          </select>
+          <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+        </div>
+        <button id="btn-reset-filters" class="btn btn-sec" style="width:auto;padding:0 12px;border-radius:12px">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
+        </button>
+      </div>
+      
+      <div id="annonces-list" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+    
+    <!-- PAGE: CHATS / MESSAGES -->
+    <div id="page-chats" class="page">
+      <div style="margin-bottom:14px"><h2 style="font-size:1.1rem;font-weight:700">Vos conversations</h2></div>
+      <div id="chats-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+    
+    <!-- PAGE: PROFIL -->
+    <div id="page-profil" class="page">
+      <div id="profil-container"></div>
+    </div>
+  </div>
+  
+  <nav id="nav-bar">
+    <div class="nav-item active" data-page="recherche">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <span>Recherche</span>
+    </div>
+    <div class="nav-item" data-page="chats" style="position:relative">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      <span>Messages</span>
+      <div id="badge-nav-chat" style="display:none;position:absolute;top:4px;right:24px;width:8px;height:8px;background:var(--error);border-radius:50%"></div>
+    </div>
+    <div class="nav-item" data-page="profil">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <span>Profil</span>
+    </div>
+  </nav>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- SDK FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, get, update, onValue, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    databaseURL: "https://brawl-match-default-rtdb.europe-west1.firebasedatabase.app/"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ── CONFIGURATION & DONNÉES GLOBALES ─────────────────────────────────────
+  const DEFAV = "shelly";
+  const AVATARS = [
+    "shelly","colt","barley","el_primo","poco","rosa","bull","jessie","brock","dynamike",
+    "bo","tick","8_bit","emz","stu","el_costo","rico","darryl","penny","carl",
+    "jacky","piper","pam","frank","bibi","bea","nani","edgar","griff","grom",
+    "bonnie","gale","colette","lou","colonel_ruffs","belle","buzz","ash","lola",
+    "fang","eve","janet","otis","sam","buster","mandy","mortis","tara","gene",
+    "max","mr_p","sprout","byron","squeak","louis","amber","meg","surge",
+    "chester","spike","crow","leon","sandy","amber_2","cordelius","rt"
+  ];
+  const BRAWLERS = [
+    { id: "shelly", name: "Shelly" }, { id: "colt", name: "Colt" }, { id: "barley", name: "Barley" },
+    { id: "el_primo", name: "El Primo" }, { id: "poco", name: "Poco" }, { id: "rosa", name: "Rosa" },
+    { id: "bull", name: "Bull" }, { id: "jessie", name: "Jessie" }, { id: "brock", name: "Brock" },
+    { id: "dynamike", name: "Dynamike" }, { id: "bo", name: "Bo" }, { id: "tick", name: "Tick" },
+    { id: "8_bit", name: "8-Bit" }, { id: "emz", name: "Emz" }, { id: "stu", name: "Stu" },
+    { id: "rico", name: "Rico" }, { id: "darryl", name: "Darryl" }, { id: "penny", name: "Penny" },
+    { id: "carl", name: "Carl" }, { id: "jacky", name: "Jacky" }, { id: "piper", name: "Piper" },
+    { id: "pam", name: "Pam" }, { id: "frank", name: "Frank" }, { id: "bibi", name: "Bibi" },
+    { id: "bea", name: "Bea" }, { id: "nani", name: "Nani" }, { id: "edgar", name: "Edgar" },
+    { id: "griff", name: "Griff" }, { id: "grom", name: "Grom" }, { id: "bonnie", name: "Bonnie" },
+    { id: "gale", name: "Gale" }, { id: "colette", name: "Colette" }, { id: "lou", name: "Lou" },
+    { id: "colonel_ruffs", name: "Colonel Ruffs" }, { id: "belle", name: "Belle" },
+    { id: "buzz", name: "Buzz" }, { id: "ash", name: "Ash" }, { id: "lola", name: "Lola" },
+    { id: "fang", name: "Fang" }, { id: "eve", name: "Eve" }, { id: "janet", name: "Janet" },
+    { id: "otis", name: "Otis" }, { id: "sam", name: "Sam" }, { id: "buster", name: "Buster" },
+    { id: "mandy", name: "Mandy" }, { id: "mortis", name: "Mortis" }, { id: "tara", name: "Tara" },
+    { id: "gene", name: "Gene" }, { id: "max", name: "Max" }, { id: "mr_p", name: "Mr. P" },
+    { id: "sprout", name: "Sprout" }, { id: "byron", name: "Byron" }, { id: "squeak", name: "Squeak" },
+    { id: "amber", name: "Amber" }, { id: "meg", name: "Meg" }, { id: "surge", name: "Surge" },
+    { id: "chester", name: "Chester" }, { id: "spike", name: "Spike" }, { id: "crow", name: "Crow" },
+    { id: "leon", name: "Leon" }, { id: "sandy", name: "Sandy" }, { id: "cordelius", name: "Cordelius" },
+    { id: "rt", name: "R-T" }, { id: "pearl", name: "Pearl" }, { id: "maisie", name: "Maisie" },
+    { id: "hank", name: "Hank" }, { id: "willow", name: "Willow" }, { id: "doug", name: "Doug" },
+    { id: "charlie", name: "Charlie" }, { id: "mico", name: "Mico" }, { id: "kit", name: "Kit" },
+    { id: "larry_lawrie", name: "Larry & Lawrie" }, { id: "melodie", name: "Melodie" },
+    { id: "angelo", name: "Angelo" }, { id: "draco", name: "Draco" }, { id: "lily", name: "Lily" },
+    { id: "berry", name: "Berry" }, { id: "clancy", name: "Clancy" }, { id: "moe", name: "Moe" },
+    { id: "kenji", name: "Kenji" }, { id: "juju", name: "Juju" }, { id: "shades", name: "Shades" }
+  ];
+
+  // ── VARIABLES D'ÉTAT LOCAL ────────────────────────────────────────────────
+  let myId = localStorage.getItem('spk3_myId') || null;
+  let myData = null;
+  let activeTab = "recherche";
+  let currentFilterBrawler = "";
+  let cacheUsers = {};
+  let globalAnnonces = [];
+
+  // TOAST NOTIFICATIONS
+  function toast(msg, type='ok') {
+    const c = document.getElementById('toast-container');
+    if(!c) return;
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `
+      ${type==='ok'?'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>':'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'}
+      <span>${msg}</span>
+    `;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  // NAVIGATION PRINCIPALE
+  function initNav() {
+    document.querySelectorAll('.nav-item').forEach(it => {
+      it.onclick = () => {
+        const p = it.getAttribute('data-page');
+        switchTab(p);
+      };
+    });
+  }
+
+  function switchTab(tab) {
+    if(!myId && tab !== 'recherche') {
+      openAuthPage();
+      return;
+    }
+    activeTab = tab;
+    document.querySelectorAll('.nav-item').forEach(it => {
+      it.classList.toggle('active', it.getAttribute('data-page') === tab);
+    });
+    document.querySelectorAll('.page').forEach(pg => {
+      pg.classList.toggle('active', pg.id === `page-${tab}`);
+    });
+    renderHeaderActions();
+    if(tab === 'recherche') renderAnnonces();
+    if(tab === 'chats') renderChatsList();
+    if(tab === 'profil') showProfile(myId);
+  }
+
+  // EN-TÊTE DYNAMIQUE
+  function renderHeaderActions() {
+    const ha = document.getElementById('header-actions');
+    const title = document.getElementById('app-title-main');
+    ha.innerHTML = '';
+    title.innerText = "Brawl Match";
+
+    if(activeTab === 'recherche') {
+      ha.innerHTML = `
+        <button id="h-btn-add" style="background:var(--accent);border:none;color:#fff;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      `;
+      document.getElementById('h-btn-add').onclick = () => {
+        if(!myId) openAuthPage();
+        else openAnnonce();
+      };
+    } else if(activeTab === 'profil' && myId) {
+      ha.innerHTML = `
+        <button id="h-btn-logout" style="background:var(--bg3);border:1px solid var(--border);color:var(--error);width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      `;
+      document.getElementById('h-btn-logout').onclick = () => logout();
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('spk3_myId');
+    myId = null;
+    myData = null;
+    toast('Déconnecté', 'ok');
+    switchTab('recherche');
+  }
+
+  // RÉCUPÉRATION DES UTILISATEURS (CACHE)
+  async function getUserData(uid) {
+    if(cacheUsers[uid]) return cacheUsers[uid];
+    try {
+      const s = await get(ref(db, `spk3/users/${uid}`));
+      if(s.exists()) {
+        cacheUsers[uid] = s.val();
+        return cacheUsers[uid];
+      }
+    } catch(e) {}
+    return { name: uid, fullname: uid, avatar: DEFAV };
+  }
+
+  // ── API BRAWL STARS (PROXY SANS CLÉ) ──────────────────────────────────────
+  async function fetchBsPlayer(tag) {
+    const cleanTag = tag.replace('#', '').toUpperCase();
+    const url = `https://brawlstars-api-proxy.entreprises-90e.workers.dev/player/${cleanTag}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Joueur introuvable ou erreur API");
+    return await res.json();
+  }
+
+  // ── AUTHENTIFICATION / INSCRIPTION & CONNEXION ───────────────────────────
+  function openAuthPage() {
+    if(document.getElementById('auth-page')) return;
+    const m = document.createElement('div');
+    m.id = 'auth-page';
+    m.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:2000;display:flex;flex-direction:column;max-width:480px;margin:0 auto;animation:fadeIn 0.2s ease';
+    m.innerHTML = `
+      <div style="padding:16px;display:flex;align-items:center;border-bottom:1px solid var(--border)">
+        <button id="auth-close" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600;font-size:0.9rem">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          Retour
+        </button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:24px 16px">
+        <div style="text-align:center;margin-bottom:32px">
+          <h2 style="font-size:1.6rem;font-weight:800;margin-bottom:6px">Rejoignez Brawl Match</h2>
+          <p style="font-size:0.85rem;color:var(--text2)">Trouvez instantanément vos coéquipiers</p>
+        </div>
+        
+        <div style="display:flex;background:var(--bg2);padding:4px;border-radius:12px;margin-bottom:24px;border:1px solid var(--border)">
+          <button id="tab-login" style="flex:1;background:var(--bg3);border:none;color:#fff;padding:10px;border-radius:9px;font-weight:600;font-size:0.85rem;cursor:pointer">Connexion</button>
+          <button id="tab-signup" style="flex:1;background:none;border:none;color:var(--text3);padding:10px;border-radius:9px;font-weight:600;font-size:0.85rem;cursor:pointer">Inscription</button>
+        </div>
+        
+        <div id="auth-form-box"></div>
+      </div>
+    `;
+    document.body.appendChild(m);
+
+    let mode = 'login';
+    let signupAv = DEFAV;
+
+    document.getElementById('auth-close').onclick = () => m.remove();
+    
+    const tLog = document.getElementById('tab-login');
+    const tSig = document.getElementById('tab-signup');
+    
+    tLog.onclick = () => { mode='login'; tLog.style.background='var(--bg3)'; tLog.style.color='#fff'; tSig.style.background='none'; tSig.style.color='var(--text3)'; renderForm(); };
+    tSig.onclick = () => { mode='signup'; tSig.style.background='var(--bg3)'; tSig.style.color='#fff'; tLog.style.background='none'; tLog.style.color='var(--text3)'; renderForm(); };
+
+    function renderForm() {
+      const box = document.getElementById('auth-form-box');
+      if(mode === 'login') {
+        box.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Identifiant unique</label><input type="text" id="li-name" placeholder="Ex: darkknight77" autocomplete="off"/></div>
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Mot de passe</label><input type="password" id="li-pwd" placeholder="••••••••"/></div>
+            <button id="btn-do-login" class="btn" style="margin-top:10px">Se connecter</button>
+          </div>
+        `;
+        document.getElementById('btn-do-login').onclick = async () => {
+          const name = document.getElementById('li-name').value.trim().toLowerCase();
+          const pwd = document.getElementById('li-pwd').value;
+          if(!name || !pwd) return toast('Remplissez les champs', 'err');
+          
+          try {
+            const snap = await get(ref(db, `spk3/users/${name}`));
+            if(!snap.exists()) return toast('Identifiant ou mot de passe incorrect', 'err');
+            const u = snap.val();
+            const enc = btoa(unescape(encodeURIComponent(pwd)));
+            if(u.pwd !== enc) return toast('Identifiant ou mot de passe incorrect', 'err');
+            
+            localStorage.setItem('spk3_myId', name);
+            myId = name;
+            myData = u;
+            toast(`Ravi de vous revoir, ${u.fullname} !`, 'ok');
+            m.remove();
+            switchTab('recherche');
+          } catch(e) { toast('Erreur de connexion', 'err'); }
+        };
+      } else {
+        box.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Identifiant unique (connexion)</label><input type="text" id="si-name" placeholder="Ex: pseudounique (sans espace)" autocomplete="off"/></div>
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Nom d'affichage public</label><input type="text" id="si-fname" placeholder="Ex: Le Roi Spike" autocomplete="off"/></div>
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Mot de passe</label><input type="password" id="si-pwd" placeholder="Minimum 6 caractères"/></div>
+            <div><label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em">Bio / Description (optionnel)</label><textarea id="si-bio" placeholder="Présentez-vous en quelques mots..." style="height:70px;resize:none"></textarea></div>
+            
+            <div>
+              <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.03em">Choisissez votre brawler préféré</label>
+              <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory" id="signup-av-list">
+                ${AVATARS.map(av => `
+                  <div data-av="${av}" style="flex:0 0 54px;height:54px;border-radius:50%;border:2px solid transparent;cursor:pointer;scroll-snap-align:start;background:var(--bg2);display:flex;align-items:center;justify-content:center">
+                    <img src="assets/${av}_pin.png" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'"/>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <button id="btn-do-signup" class="btn" style="margin-top:10px">Créer mon compte</button>
+          </div>
+        `;
+        
+        const avDivs = box.querySelectorAll('#signup-av-list [data-av]');
+        function selAv(target) {
+          avDivs.forEach(d => {
+            if(d.getAttribute('data-av') === target) {
+              d.style.borderColor = 'var(--accent)';
+              d.style.background = 'rgba(94, 53, 177, 0.2)';
+            } else {
+              d.style.borderColor = 'transparent';
+              d.style.background = 'var(--bg2)';
+            }
+          });
+          signupAv = target;
+        }
+        selAv(DEFAV);
+        avDivs.forEach(d => d.onclick = () => selAv(d.getAttribute('data-av')));
+
+        document.getElementById('btn-do-signup').onclick = async () => {
+          const name = document.getElementById('si-name').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+          const fname = document.getElementById('si-fname').value.trim();
+          const pwd = document.getElementById('si-pwd').value;
+          const bio = document.getElementById('si-bio').value.trim();
+          
+          if(!name || !fname || !pwd) return toast('Remplissez les champs obligatoires', 'err');
+          if(name.length < 3) return toast('Identifiant trop court (min 3)', 'err');
+          if(pwd.length < 6) return toast('Mot de passe trop court (min 6)', 'err');
+          
+          try {
+            const check = await get(ref(db, `spk3/users/${name}`));
+            if(check.exists()) return toast(`L'identifiant "${name}" est déjà pris`, 'err');
+            
+            const u = {
+              id: name,
+              name,
+              fullname: fname,
+              bio,
+              pwd: btoa(unescape(encodeURIComponent(pwd))),
+              avatar: signupAv || DEFAV,
+              posts: 0,
+              createdAt: Date.now(),
+              brawlers: { shelly: true }
+            };
+            
+            await set(ref(db, `spk3/users/${name}`), u);
+            localStorage.setItem('spk3_myId', name);
+            myId = name;
+            myData = u;
+            toast('Compte créé avec succès !', 'ok');
+            m.remove();
+            switchTab('recherche');
+          } catch(e) { toast('Erreur lors de la création du compte', 'err'); }
+        };
+      }
+    }
+    renderForm();
+  }
+
+  // VERIFICATION DU COMPTE BRAWL STARS AVEC RECHERCHE DE BRAWLERS
+  let verifyState = null;
+  function clearVerifyState() { verifyState = null; }
+
+  function openVerifyPage() {
+    if(document.getElementById('verify-page')) return;
+    const m = document.createElement('div');
+    m.id = 'verify-page';
+    m.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:2100;display:flex;flex-direction:column;max-width:480px;margin:0 auto;animation:fadeIn 0.2s ease';
+    m.innerHTML = `
+      <div style="padding:16px;display:flex;align-items:center;border-bottom:1px solid var(--border)">
+        <button id="verify-close" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600;font-size:0.9rem">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          Retour
+        </button>
+      </div>
+      <div id="verify-body" style="flex:1;overflow-y:auto;padding:24px 16px"></div>
+    `;
+    document.body.appendChild(m);
+    document.getElementById('verify-close').onclick = () => { m.remove(); clearVerifyState(); };
+
+    renderStep1();
+
+    function renderStep1() {
+      const b = document.getElementById('verify-body');
+      b.innerHTML = `
+        <div style="text-align:center;margin-bottom:24px">
+          <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:6px">Lier votre compte Brawl Stars</h2>
+          <p style="font-size:0.85rem;color:var(--text2)">Entrez votre identifiant de joueur pour lancer la synchronisation sécurisée</p>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase">Identifiant (Player Tag)</label>
+            <input type="text" id="v-tag" placeholder="#C0G2YPL8" style="text-transform:uppercase" value="${verifyState?verifyState.tag:''}"/>
+          </div>
+          <button id="v-btn-next" class="btn">Continuer</button>
+        </div>
+      `;
+      document.getElementById('v-btn-next').onclick = async () => {
+        const tag = document.getElementById('v-tag').value.trim().toUpperCase().replace('#', '');
+        if(!tag) return toast('Entrez votre tag de joueur', 'err');
+        
+        try {
+          toast('Recherche du profil...', 'ok');
+          const p = await fetchBsPlayer(tag);
+          
+          const possible = AVATARS.filter(a => a !== DEFAV);
+          let r1 = possible[Math.floor(Math.random()*possible.length)];
+          let r2 = possible[Math.floor(Math.random()*possible.length)];
+          while(r2 === r1) { r2 = possible[Math.floor(Math.random()*possible.length)]; }
+          
+          verifyState = {
+            tag: '#' + tag,
+            targetIcon: r1,
+            targetIcon2: p.icon?.id || 0,
+            playerName: p.name
+          };
+          renderStep2();
+        } catch(e) { toast('Tag invalide ou erreur réseau', 'err'); }
+      };
+    }
+
+    function renderStep2() {
+      const b = document.getElementById('verify-body');
+      const brawlerData = BRAWLERS.find(x => x.id === verifyState.targetIcon);
+      const brawlerName = brawlerData ? brawlerData.name : verifyState.targetIcon;
+      b.innerHTML = `
+        <div style="text-align:center;margin-bottom:24px">
+          <h2 style="font-size:1.4rem;font-weight:800;margin-bottom:6px">Vérification de sécurité</h2>
+          <p style="font-size:0.85rem;color:var(--text2)">Compte trouvé : <strong style="color:#fff">${verifyState.playerName}</strong></p>
+        </div>
+        <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px">
+          <p style="font-size:0.9rem;line-height:1.5;color:var(--text2)">
+            Ouvrez votre jeu <strong>Brawl Stars</strong>, allez sur votre profil et remplacez temporairement votre icône de joueur par celle-ci :
+          </p>
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;border:2px solid var(--accent)">
+            <img src="assets/${verifyState.targetIcon}_pin.png" style="width:58px;height:58px;object-fit:contain"/>
+          </div>
+          <p style="font-size:0.85rem;font-weight:700;color:var(--accent)">Icône à mettre : ${brawlerName}</p>
+          <p style="font-size:0.75rem;color:var(--text3)">Une fois modifiée en jeu, attendez 10 secondes puis cliquez sur Valider.</p>
+          <div style="display:flex;gap:10px;width:100%;margin-top:10px">
+            <button id="v-btn-back" class="btn btn-sec" style="flex:1">Précédent</button>
+            <button id="v-btn-check" class="btn" style="flex:1">Valider</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('v-btn-back').onclick = () => renderStep1();
+      document.getElementById('v-btn-check').onclick = async () => {
+        try {
+          toast('Vérification en cours...', 'ok');
+          const p = await fetchBsPlayer(verifyState.tag);
+          
+          const brawlersPossedes = {};
+          if (p.brawlers && Array.isArray(p.brawlers)) {
+            p.brawlers.forEach(b => {
+              const bId = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              brawlersPossedes[bId] = true;
+            });
+          }
+
+          const trophies = p.trophies ?? '—';
+          const ranked = p.soloRank ?? p.currentSoloRank ?? '—';
+          
+          await update(ref(db, `spk3/users/${myId}`), {
+            bsTag: verifyState.tag,
+            bsVerified: true,
+            statTrophees: String(trophies),
+            statRanked: String(ranked),
+            brawlers: brawlersPossedes
+          });
+
+          myData.bsTag = verifyState.tag;
+          myData.bsVerified = true;
+          myData.statTrophees = String(trophies);
+          myData.statRanked = String(ranked);
+          myData.brawlers = brawlersPossedes;
+
+          clearVerifyState();
+          document.getElementById('verify-page')?.remove();
+          toast('Compte Brawl Stars vérifié ! Vos personnages ont été synchronisés.', 'ok');
+          showProfile(myId);
+        } catch(e) { toast("L'icône n'a pas encore été détectée. Veuillez réessayer.", 'err'); }
+      };
+    }
+  }
+
+  // ── PAGE DE PROFIL ────────────────────────────────────────────────────────
+  async function showProfile(uid) {
+    const isMe = (uid === myId);
+    const u = isMe ? myData : await getUserData(uid);
+    const container = document.getElementById('profil-container');
+    if(!container) return;
+
+    let blocBs = '';
+    if(u.bsVerified) {
+      blocBs = `
+        <div class="card" style="background:linear-gradient(135deg, rgba(var(--accent-rgb),0.1), transparent);border-color:rgba(var(--accent-rgb),0.3)">
+          <div style="display:flex;justify-content:between;align-items:center;margin-bottom:12px">
+            <span style="font-size:0.75rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em">Compte Brawl Stars Certifié</span>
+            <span style="font-size:0.85rem;font-weight:700;color:var(--text2)">${u.bsTag}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="background:var(--bg);padding:10px;border-radius:10px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:0.7rem;color:var(--text3);font-weight:700;text-transform:uppercase">Trophées</div>
+              <div style="font-size:1.1rem;font-weight:800;color:var(--warning);margin-top:2px">🏆 ${u.statTrophees || '—'}</div>
+            </div>
+            <div style="background:var(--bg);padding:10px;border-radius:10px;text-align:center;border:1px solid var(--border)">
+              <div style="font-size:0.7rem;color:var(--text3);font-weight:700;text-transform:uppercase">Rang</div>
+              <div style="font-size:1.1rem;font-weight:800;color:#fff;margin-top:2px">⭐ ${u.statRanked || '—'}</div>
+            </div>
+          </div>
+          ${isMe ? `<button id="profil-sync-brawlers" class="btn btn-sec" style="margin-top:12px;padding:8px;font-size:0.8rem">🔄 Mettre à jour mes brawlers</button>` : ''}
+        </div>
+      `;
+    } else if(isMe) {
+      blocBs = `
+        <div class="card" style="border-style:dashed;text-align:center;padding:20px 16px">
+          <p style="font-size:0.85rem;color:var(--text2);margin-bottom:12px">Liez votre compte Brawl Stars officiel pour afficher vos vraies statistiques et filtrer vos brawlers.</p>
+          <button id="profil-go-verify" class="btn btn-sec" style="font-size:0.85rem">Lier mon compte</button>
+        </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <div style="text-align:center;margin-top:10px;margin-bottom:24px">
+        <div style="position:relative;width:84px;height:84px;margin:0 auto 12px auto">
+          <div style="width:84px;height:84px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden">
+            <img src="assets/${u.avatar}_pin.png" style="width:68px;height:68px;object-fit:contain" onerror="this.style.background='var(--bg3)'"/>
+          </div>
+          ${u.bsVerified ? `<div style="position:absolute;bottom:0;right:0;background:var(--accent);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)"><svg width="12" height="12" fill="none" stroke="#fff" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>`:''}
+        </div>
+        <h2 style="font-size:1.3rem;font-weight:800">${u.fullname}</h2>
+        <p style="font-size:0.8rem;color:var(--text3);margin-top:2px">@${u.name}</p>
+        ${u.bio ? `<p style="font-size:0.85rem;color:var(--text2);margin-top:10px;padding:0 20px;line-height:1.4">${u.bio}</p>` : ''}
+      </div>
+      
+      ${blocBs}
+    `;
+
+    if(isMe) {
+      const btnV = document.getElementById('profil-go-verify');
+      if(btnV) btnV.onclick = () => openVerifyPage();
+      
+      const btnSync = document.getElementById('profil-sync-brawlers');
+      if(btnSync) {
+        btnSync.onclick = async () => {
+          try {
+            toast('Mise à jour en cours...', 'ok');
+            const p = await fetchBsPlayer(u.bsTag);
+            const brawlersPossedes = {};
+            if (p.brawlers && Array.isArray(p.brawlers)) {
+              p.brawlers.forEach(b => {
+                const bId = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                brawlersPossedes[bId] = true;
+              });
+            }
+            const trophies = p.trophies ?? '—';
+            const ranked = p.soloRank ?? p.currentSoloRank ?? '—';
+            
+            await update(ref(db, `spk3/users/${myId}`), {
+              statTrophees: String(trophies),
+              statRanked: String(ranked),
+              brawlers: brawlersPossedes
+            });
+            myData.statTrophees = String(trophies);
+            myData.statRanked = String(ranked);
+            myData.brawlers = brawlersPossedes;
+            
+            toast('Données synchronisées !', 'ok');
+            showProfile(myId);
+          } catch(e) { toast('Impossible de se connecter à l\'API', 'err'); }
+        };
+      }
+    }
+  }
+
+  // ── AJOUT D'UNE ANNONCE ──────────────────────────────────────────────────
+  function openAnnonce() {
+    if(document.getElementById('annonce-page')) return;
+    const m = document.createElement('div');
+    m.id = 'annonce-page';
+    m.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:1500;display:flex;flex-direction:column;max-width:480px;margin:0 auto;animation:fadeIn 0.2s ease';
+    m.innerHTML = `
+      <div style="padding:16px;display:flex;align-items:center;justify-content:between;border-bottom:1px solid var(--border)">
+        <button id="ann-close" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600;font-size:0.9rem">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          Fermer
+        </button>
+        <h3 style="font-size:1rem;font-weight:700">Créer une annonce</h3>
+        <div style="width:60px"></div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase">Description de votre recherche</label>
+            <textarea id="ann-desc" placeholder="Ex: Recherche un bon mid pour monter en RdC, vocal Discord dispo..." style="height:90px;resize:none"></textarea>
+          </div>
+          <div>
+            <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase">Choisissez le brawler requis</label>
+            <div id="ann-brawler-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(70px, 1fr));gap:8px;max-height:280px;overflow-y:auto;padding:4px;background:var(--bg2);border-radius:14px;border:1px solid var(--border)">
+              ${BRAWLERS.filter(b => myData && myData.brawlers && myData.brawlers[b.id]).map(b => `
+                <div data-brawler="${b.id}" data-name="${b.name}" class="annonce-brawler" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:10px 8px;border-radius:14px;border:2px solid transparent;transition:all .18s;background:var(--bg);width:70px">
+                  <img src="assets/${b.id}_pin.png" style="width:48px;height:48px;object-fit:contain;border-radius:50%;background:var(--bg2)" onerror="this.style.background='var(--bg3)'"/>
+                  <span style="font-size:.62rem;font-weight:600;color:var(--text2);text-align:center;line-height:1.2;word-break:break-word;width:100%">${b.name}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <button id="btn-publish-ann" class="btn" style="margin-top:10px">Publier l'annonce</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(m);
+
+    document.getElementById('ann-close').onclick = () => m.remove();
+
+    let selBId = "";
+    let selBName = "";
+    const gridDivs = m.querySelectorAll('#ann-brawler-grid [data-brawler]');
+    gridDivs.forEach(d => {
+      d.onclick = () => {
+        gridDivs.forEach(x => x.classList.remove('selected'));
+        d.classList.add('selected');
+        selBId = d.getAttribute('data-brawler');
+        selBName = d.getAttribute('data-name');
+      };
+    });
+
+    document.getElementById('btn-publish-ann').onclick = async () => {
+      const desc = document.getElementById('ann-desc').value.trim();
+      if(!desc) return toast('Veuillez ajouter une description', 'err');
+      if(!selBId) return toast('Sélectionnez un brawler', 'err');
+
+      try {
+        const nRef = push(ref(db, 'spk3/annonces'));
+        await set(nRef, {
+          id: nRef.key,
+          uid: myId,
+          desc,
+          brawlerId: selBId,
+          brawlerName: selBName,
+          createdAt: serverTimestamp()
+        });
+        toast('Annonce en ligne !', 'ok');
+        m.remove();
+      } catch(e) { toast('Erreur lors de la publication', 'err'); }
+    };
+  }
+
+  // ── FLUX DES ANNONCES ────────────────────────────────────────────────────
+  function initAnnoncesSync() {
+    onValue(ref(db, 'spk3/annonces'), async (snap) => {
+      globalAnnonces = [];
+      if(snap.exists()) {
+        snap.forEach(c => { globalAnnonces.push(c.val()); });
+        globalAnnonces.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+      }
+      renderAnnonces();
+    });
+  }
+
+  function syncFilterBrawlersDropdown() {
+    const select = document.getElementById('filter-brawler');
+    if(!select) return;
+    
+    select.innerHTML = '<option value="">Tous les brawlers</option>';
+    
+    const elementsAAfficher = BRAWLERS.filter(b => myData && myData.brawlers && myData.brawlers[b.id]);
+    
+    elementsAAfficher.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.name;
+      if(b.id === currentFilterBrawler) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  async function renderAnnonces() {
+    if(activeTab !== 'recherche') return;
+    const container = document.getElementById('annonces-list');
+    if(!container) return;
+    
+    syncFilterBrawlersDropdown();
+
+    let filtered = globalAnnonces;
+    if(currentFilterBrawler) {
+      filtered = globalAnnonces.filter(a => a.brawlerId === currentFilterBrawler);
+    }
+
+    if(filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:40px 16px;color:var(--text3);font-size:0.9rem">
+          Aucune annonce ne correspond à vos critères.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = '';
+    for(let a of filtered) {
+      const u = await getUserData(a.uid);
+      const isMe = (a.uid === myId);
+      
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style = 'display:flex;flex-direction:column;gap:12px';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:between">
+          <div style="display:flex;align-items:center;gap:10px;cursor:pointer" id="ann-u-${a.id}">
+            <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border)">
+              <img src="assets/${u.avatar}_pin.png" style="width:30px;height:30px;object-fit:contain"/>
+            </div>
+            <div>
+              <div style="font-size:0.85rem;font-weight:700;display:flex;align-items:center;gap:4px">
+                ${u.fullname}
+                ${u.bsVerified ? `<svg width="12" height="12" fill="var(--accent)" viewBox="0 0 24 24" style="color:#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`:''}
+              </div>
+              <div style="font-size:0.75rem;color:var(--text3)">@${u.name}</div>
+            </div>
+          </div>
+          <div class="badge-brawler" style="margin-left:auto">
+            <img src="assets/${a.brawlerId}_pin.png" style="width:18px;height:18px;object-fit:contain"/>
+            <span>${a.brawlerName}</span>
+          </div>
+        </div>
+        <p style="font-size:0.88rem;color:var(--text);line-height:1.4;white-space:pre-wrap">${a.desc}</p>
+        
+        ${!isMe ? `
+          <button class="btn btn-sec" id="ann-act-${a.id}" style="padding:10px;font-size:0.8rem;border-radius:10px;height:36px">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right:2px"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            Contacter
+          </button>
+        `: `
+          <button class="btn btn-sec" id="ann-del-${a.id}" style="padding:10px;font-size:0.8rem;border-radius:10px;height:36px;color:var(--error);border-color:rgba(239,68,68,0.2)">
+            Supprimer l'annonce
+          </button>
+        `}
+      `;
+      container.appendChild(card);
+
+      document.getElementById(`ann-u-${a.id}`).onclick = () => {
+        activeTab = 'profil';
+        showProfile(a.uid);
+      };
+
+      if(!isMe) {
+        document.getElementById(`ann-act-${a.id}`).onclick = () => {
+          if(!myId) return openAuthPage();
+          openChatBox(a.uid);
+        };
+      } else {
+        document.getElementById(`ann-del-${a.id}`).onclick = async () => {
+          if(confirm('Supprimer cette annonce ?')) {
+            await set(ref(db, `spk3/annonces/${a.id}`), null);
+            toast('Annonce supprimée', 'ok');
+          }
+        };
+      }
+    }
+  }
+
+  // CONTROLE DES FILTRES DE RECHERCHE
+  document.getElementById('filter-brawler').onchange = (e) => {
+    currentFilterBrawler = e.target.value;
+    renderAnnonces();
+  };
+  document.getElementById('btn-reset-filters').onclick = () => {
+    currentFilterBrawler = "";
+    document.getElementById('filter-brawler').value = "";
+    renderAnnonces();
+  };
+
+  // ── SANS MESSAGERIE PRIVÉE (CHATS COULISSANTS) ───────────────────────────
+  let activeChatId = null;
+  let chatListenerUnsub = null;
+
+  function renderChatsList() {
+    if(activeTab !== 'chats' || !myId) return;
+    const container = document.getElementById('chats-list');
+    if(!container) return;
+
+    onValue(ref(db, `spk3/user-chats/${myId}`), async (snap) => {
+      if(activeTab !== 'chats') return;
+      if(!snap.exists()) {
+        container.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--text3);font-size:0.9rem">Aucune discussion en cours.</div>`;
+        return;
+      }
+      
+      let list = [];
+      snap.forEach(c => { list.push({ targetUid: c.key, ...c.val() }); });
+      list.sort((a,b) => (b.lastTimestamp || 0) - (a.lastTimestamp || 0));
+
+      container.innerHTML = '';
+      let globalUnread = false;
+
+      for(let item of list) {
+        const u = await getUserData(item.targetUid);
+        const hasUnread = (item.unread === true);
+        if(hasUnread) globalUnread = true;
+
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.style = `display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;border-left:4px solid ${hasUnread?'var(--accent)':'transparent'}`;
+        el.innerHTML = `
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border)">
+            <img src="assets/${u.avatar}_pin.png" style="width:32px;height:32px;object-fit:contain"/>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:2px">
+              <span style="font-size:0.88rem;font-weight:700;color:#fff">${u.fullname}</span>
+            </div>
+            <p style="font-size:0.8rem;color:${hasUnread?'var(--text)':'var(--text3)'};text-overflow:ellipsis;overflow:hidden;white-space:nowrap;font-weight:${hasUnread?'600':'400'}">
+              ${item.lastText || 'Pas de message'}
+            </p>
+          </div>
+        `;
+        el.onclick = () => openChatBox(item.targetUid);
+        container.appendChild(el);
+      }
+      
+      document.getElementById('badge-nav-chat').style.display = globalUnread ? 'block' : 'none';
+    });
+  }
+
+  function initGlobalUnreadBadge() {
+    if(!myId) return;
+    onValue(ref(db, `spk3/user-chats/${myId}`), snap => {
+      let unread = false;
+      if(snap.exists()) {
+        snap.forEach(c => { if(c.val().unread === true) unread = true; });
+      }
+      document.getElementById('badge-nav-chat').style.display = unread ? 'block' : 'none';
+    });
+  }
+
+  async function openChatBox(targetUid) {
+    if(document.getElementById('chatbox-page')) return;
+    activeChatId = [myId, targetUid].sort().join('--');
+    
+    const u = await getUserData(targetUid);
+    
+    // Marquer comme lu
+    await update(ref(db, `spk3/user-chats/${myId}/${targetUid}`), { unread: false });
+
+    const m = document.createElement('div');
+    m.id = 'chatbox-page';
+    m.style = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:1800;display:flex;flex-direction:column;max-width:480px;margin:0 auto;animation:fadeIn 0.18s ease';
+    m.innerHTML = `
+      <div style="padding:12px 16px;display:flex;align-items:center;border-bottom:1px solid var(--border);background:var(--bg2)">
+        <button id="cb-back" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;padding:4px">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div style="display:flex;align-items:center;gap:10px;margin-left:6px">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border)">
+            <img src="assets/${u.avatar}_pin.png" style="width:26px;height:26px;object-fit:contain"/>
+          </div>
+          <div>
+            <div style="font-size:0.85rem;font-weight:700">${u.fullname}</div>
+            <div style="font-size:0.7rem;color:var(--text3)">@${u.name}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="cb-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+      
+      <div style="padding:12px 14px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;padding-bottom:calc(12px + env(safe-area-inset-bottom))">
+        <input type="text" id="cb-input" placeholder="Votre message..." autocomplete="off" style="flex:1"/>
+        <button id="cb-send" style="background:var(--accent);border:none;color:#fff;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </div>
+    `;
+    document.body.appendChild(m);
+
+    const msgContainer = document.getElementById('cb-messages');
+    const input = document.getElementById('cb-input');
+    const btnSend = document.getElementById('cb-send');
+
+    document.getElementById('cb-back').onclick = () => {
+      if(chatListenerUnsub) chatListenerUnsub();
+      m.remove();
+      activeChatId = null;
+      renderChatsList();
+    };
+
+    // Écoute des messages en temps réel
+    chatListenerUnsub = onValue(ref(db, `spk3/chats/${activeChatId}`), (snap) => {
+      msgContainer.innerHTML = '';
+      if(snap.exists()) {
+        snap.forEach(c => {
+          const mData = c.val();
+          const isMe = (mData.sender === myId);
+          
+          const row = document.createElement('div');
+          row.style = `display:flex;width:100%;justify-content:${isMe?'flex-end':'flex-start'}`;
+          
+          const box = document.createElement('div');
+          box.style = `max-width:75%;padding:10px 14px;border-radius:14px;font-size:0.88rem;line-height:1.4;word-break:break-word;${isMe?'background:var(--accent);color:#fff;border-bottom-right-radius:2px':'background:var(--bg2);color:#fff;border-bottom-left-radius:2px;border:1px solid var(--border)'}`;
+          box.innerText = mData.text;
+          
+          row.appendChild(box);
+          msgContainer.appendChild(row);
+        });
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      }
+    });
+
+    async function sendMessage() {
+      const txt = input.value.trim();
+      if(!txt) return;
+      input.value = '';
+      
+      const mRef = push(ref(db, `spk3/chats/${activeChatId}`));
+      const now = Date.now();
+      
+      await set(mRef, {
+        sender: myId,
+        text: txt,
+        timestamp: now
+      });
+
+      // Mettre à jour l'historique pour les deux côtés
+      await set(ref(db, `spk3/user-chats/${myId}/${targetUid}`), { lastText: txt, lastTimestamp: now, unread: false });
+      await set(ref(db, `spk3/user-chats/${targetUid}/${myId}`), { lastText: txt, lastTimestamp: now, unread: true });
+    }
+
+    btnSend.onclick = () => sendMessage();
+    input.onkeydown = (e) => { if(e.key === 'Enter') sendMessage(); };
+    input.focus();
+  }
+
+  // ── INITIALISATION COMPLÈTE AU LANCEMENT ─────────────────────────────────
+  async function initApp() {
+    initNav();
+    renderHeaderActions();
+    
+    if(myId) {
+      try {
+        const snap = await get(ref(db, `spk3/users/${myId}`));
+        if(snap.exists()) {
+          myData = snap.val();
+          initGlobalUnreadBadge();
+        } else {
+          localStorage.removeItem('spk3_myId');
+          myId = null;
+        }
+      } catch(e) {
+        localStorage.removeItem('spk3_myId');
+        myId = null;
+      }
+    }
+    
+    initAnnoncesSync();
+  }
+
+  initApp();
+</script>
+
+</body>
+</html>
