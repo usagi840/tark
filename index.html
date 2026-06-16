@@ -2737,9 +2737,11 @@ async function fetchBsPlayer(tag){
   return data;
 }
 
-function pickRandomIcon(exclude=[]){
-  const pool = BS_ICONS_POOL.filter(id=>!exclude.includes(id));
-  return pool[Math.floor(Math.random()*pool.length)];
+function pickRandomIcon(exclude=[],pool=null){
+const source=pool??BS_ICON_POOL;
+const available=source.filter(id=>!exclude.includes(id));
+if(!available.length) return source[0];
+return available[Math.floor(Math.random()*available.length)];
 }
 
 async function refreshBsStats(){
@@ -2818,7 +2820,8 @@ function renderVerifyStep(){
         const player = await fetchBsPlayer(tag);
         verifyState.tag=tag;
         verifyState.iconBefore=player.icon?.id??null;
-        verifyState.targetIcon1=pickRandomIcon([verifyState.iconBefore]);
+        verifyState.iconPool=player.brawlers?.map(b=>b.skin?.id).filter(id=>id&&id!==verifyState.iconBefore)??[];
+        verifyState.targetIcon1=pickRandomIcon([verifyState.iconBefore],verifyState.iconPool);
         saveVerifyState();
         verifyState.step=2;
         saveVerifyState();
@@ -2851,7 +2854,7 @@ function renderVerifyStep(){
         const player=await fetchBsPlayer(verifyState.tag);
         if(player.icon?.id===verifyState.targetIcon1){
           verifyState.iconBefore=player.icon.id;
-          verifyState.targetIcon2=pickRandomIcon([verifyState.targetIcon1]);
+          verifyState.targetIcon2=pickRandomIcon([verifyState.targetIcon1],verifyState.iconPool);
           saveVerifyState();
           verifyState.step=3;
           saveVerifyState();
