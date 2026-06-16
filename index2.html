@@ -2709,10 +2709,12 @@ const BS_ICONS_POOL = [28000000,28000001,28000002,28000003,28000004,28000005,280
 let verifyState = { step:0, tag:'', iconBefore:null, targetIcon1:null, targetIcon2:null };
 
 async function fetchBsPlayer(tag){
-  const encoded = encodeURIComponent(tag.startsWith('#')?tag:'#'+tag);
-  const res = await fetch(`https://api.brawlapi.com/v1/players/${encoded}`);
-  if(!res.ok) throw new Error('Joueur introuvable');
-  return res.json();
+  const clean = (tag.startsWith("#")?tag.slice(1):tag).toUpperCase();
+  const res = await fetch(`https://tark.alex-usagi84.workers.dev/?tag=${encodeURIComponent(clean)}`);
+  if(!res.ok) throw new Error("Joueur introuvable");
+  const data = await res.json();
+  if(data.error) throw new Error("Joueur introuvable");
+  return data;
 }
 
 function pickRandomIcon(exclude=[]){
@@ -2740,22 +2742,26 @@ function openVerifyModal(){
   if(myData.bsVerified){ toast('Compte déjà vérifié ✅','ok'); return; }
   verifyState={step:1,tag:'',iconBefore:null,targetIcon1:null,targetIcon2:null};
 
-  const overlay=document.createElement('div');
-  overlay.id='verify-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);animation:fdin .18s';
-  overlay.innerHTML=`
-    <div style="background:var(--card);border-radius:24px;padding:28px;max-width:420px;width:100%;box-shadow:var(--shadow-lg);animation:mup .22s ease">
-      <div style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600;margin-bottom:6px">🎮 Vérifier ton compte</div>
-      <div style="font-size:.85rem;color:var(--text2);margin-bottom:20px">Entre ton tag Brawl Stars pour lier ton compte</div>
-      <div id="verify-body"></div>
-      <div id="verify-err" style="font-size:.8rem;color:var(--red);margin-top:10px;min-height:14px"></div>
-      <div style="display:flex;gap:10px;margin-top:18px">
-        <button id="verify-cancel" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:none;font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer">Annuler</button>
-        <button id="verify-next" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer">Continuer</button>
+  const page=document.createElement('div');
+  page.id='verify-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="verify-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div>
+        <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text)">🎮 Vérifier mon compte</div>
+        <div id="verify-subtitle" style="font-size:.75rem;color:var(--text3)">Étape 1 sur 3</div>
       </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+      <div id="verify-body"></div>
+      <div id="verify-err" style="font-size:.82rem;color:var(--red);margin-top:12px;min-height:16px;text-align:center"></div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="verify-next" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s">Continuer</button>
     </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#verify-cancel').addEventListener('click',()=>overlay.remove());
+  document.body.appendChild(page);
+  page.querySelector('#verify-back').addEventListener('click',()=>page.remove());
   renderVerifyStep();
 }
 
@@ -2763,19 +2769,27 @@ function renderVerifyStep(){
   const body=document.getElementById('verify-body');
   const err=document.getElementById('verify-err');
   const btn=document.getElementById('verify-next');
+  const sub=document.getElementById('verify-subtitle');
   if(!body||!btn) return;
   err.textContent='';
 
   if(verifyState.step===1){
+    if(sub) sub.textContent='Étape 1 sur 3 — Ton tag';
     body.innerHTML=`
-      <div style="font-size:.8rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Ton tag Brawl Stars</div>
-      <input id="verify-tag-inp" class="inp" placeholder="#ABC123" value="${verifyState.tag}" style="text-transform:uppercase"/>`;
-    btn.textContent='Continuer';
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:2.5rem;margin-bottom:8px">🎮</div>
+        <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:6px">Entre ton tag Brawl Stars</div>
+        <div style="font-size:.85rem;color:var(--text2)">Tu trouveras ton tag dans ton profil Brawl Stars</div>
+      </div>
+      <div style="font-size:.75rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Tag Brawl Stars</div>
+      <input id="verify-tag-inp" class="inp" placeholder="#2QJ880V9P" value="${verifyState.tag}" style="text-transform:uppercase;font-size:1.1rem;font-weight:600;text-align:center;letter-spacing:1px"/>
+      <div style="font-size:.78rem;color:var(--text3);margin-top:8px;text-align:center">Le # est optionnel</div>`;
+    btn.textContent='Continuer →';
     btn.onclick=async()=>{
       const inp=document.getElementById('verify-tag-inp');
-      const tag=(inp?.value||'').trim().toUpperCase();
-      if(!tag||tag.length<4){ err.textContent='Tag invalide'; return; }
-      btn.disabled=true; btn.textContent='Vérification…';
+      const tag=(inp?.value||'').trim().toUpperCase().replace(/^#*/,'');
+      if(!tag||tag.length<3){ err.textContent='Tag invalide'; return; }
+      btn.disabled=true; btn.textContent='Recherche…';
       try{
         const player = await fetchBsPlayer(tag);
         verifyState.tag=tag;
@@ -2785,20 +2799,26 @@ function renderVerifyStep(){
         renderVerifyStep();
       }catch(e){
         err.textContent='Joueur introuvable. Vérifie ton tag.';
-      }finally{ btn.disabled=false; }
+      }finally{ btn.disabled=false; btn.textContent='Continuer →'; }
     };
   }
 
   else if(verifyState.step===2){
+    if(sub) sub.textContent='Étape 2 sur 3 — Équipe cette icône';
     body.innerHTML=`
-      <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
-        <div style="font-size:.85rem;color:var(--text);line-height:1.6">
-          Dans Brawl Stars, va dans <strong>Profil → Icône</strong> et équipe l'icône avec l'ID :<br/>
-          <span style="font-size:1.4rem;font-weight:700;color:var(--accent);display:block;margin-top:6px;text-align:center">#${verifyState.targetIcon1}</span>
-        </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:2.5rem;margin-bottom:8px">🖼️</div>
+        <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:6px">Change ton icône</div>
+        <div style="font-size:.85rem;color:var(--text2)">Dans Brawl Stars, va dans <strong>Profil → Icône</strong> et équipe :</div>
       </div>
-      <div style="font-size:.78rem;color:var(--text2);margin-top:10px;text-align:center">Une fois équipée, reviens ici et clique Valider</div>`;
-    btn.textContent='Valider ✓';
+      <div style="background:var(--accentbg);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ID de l'icône à équiper</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">${verifyState.targetIcon1}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Ouvre Brawl Stars → Ton profil → Icône de joueur → Cherche l'ID <strong>${verifyState.targetIcon1}</strong> → Équipe-la → Reviens ici</div>
+      </div>`;
+    btn.textContent='J'ai équipé l'icône ✓';
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='Vérification…';
       try{
@@ -2809,30 +2829,34 @@ function renderVerifyStep(){
           verifyState.step=3;
           renderVerifyStep();
         }else{
-          err.textContent='Icône incorrecte. Vérifie que tu l\'as bien équipée.';
-          btn.disabled=false; btn.textContent='Valider ✓';
+          err.textContent='Icône incorrecte. Vérifie que tu l'as bien équipée dans le jeu.';
+          btn.disabled=false; btn.textContent='J'ai équipé l'icône ✓';
         }
-      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent='Valider ✓'; }
+      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent='J'ai équipé l'icône ✓'; }
     };
   }
 
   else if(verifyState.step===3){
+    if(sub) sub.textContent='Étape 3 sur 3 — Confirmation finale';
     body.innerHTML=`
-      <div style="background:var(--accentbg);border-radius:12px;padding:14px;border:1px solid rgba(255,92,53,.2)">
-        <div style="font-size:.82rem;color:var(--text2);margin-bottom:4px">Parfait ! Dernière étape :</div>
-        <div style="font-size:.85rem;color:var(--text);line-height:1.6">
-          Équipe maintenant l'icône :<br/>
-          <span style="font-size:1.4rem;font-weight:700;color:var(--accent);display:block;margin-top:6px;text-align:center">#${verifyState.targetIcon2}</span>
-        </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:2.5rem;margin-bottom:8px">✅</div>
+        <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:6px">Presque fini !</div>
+        <div style="font-size:.85rem;color:var(--text2)">Équipe une dernière icône pour confirmer</div>
       </div>
-      <div style="font-size:.78rem;color:var(--text2);margin-top:10px;text-align:center">Reviens ici une fois équipée</div>`;
-    btn.textContent='Valider ✓';
+      <div style="background:var(--accentbg);border:2px solid var(--accent);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
+        <div style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ID de l'icône à équiper</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--text);font-family:'Fraunces',serif">${verifyState.targetIcon2}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+        <div style="font-size:.82rem;color:var(--text2);line-height:1.6">📱 Même chose : équipe l'icône <strong>${verifyState.targetIcon2}</strong> dans Brawl Stars puis reviens ici</div>
+      </div>`;
+    btn.textContent='Valider mon compte ✓';
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='Finalisation…';
       try{
         const player=await fetchBsPlayer(verifyState.tag);
         if(player.icon?.id===verifyState.targetIcon2){
-          // ✅ Vérifié !
           const trophies=player.trophies??'—';
           const ranked=player.soloRank??player.currentSoloRank??'—';
           await update(ref(db,`spk3/users/${myId}`),{
@@ -2845,17 +2869,18 @@ function renderVerifyStep(){
           myData.bsVerified=true;
           myData.statTrophees=String(trophies);
           myData.statRanked=String(ranked);
-          document.getElementById('verify-overlay')?.remove();
+          document.getElementById('verify-page')?.remove();
           toast('Compte Brawl Stars vérifié ! 🎉','ok');
           showProfile(myId);
         }else{
           err.textContent='Icône incorrecte. Réessaie.';
-          btn.disabled=false; btn.textContent='Valider ✓';
+          btn.disabled=false; btn.textContent='Valider mon compte ✓';
         }
-      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent='Valider ✓'; }
+      }catch(e){ err.textContent='Erreur réseau. Réessaie.'; btn.disabled=false; btn.textContent='Valider mon compte ✓'; }
     };
   }
 }
+
 
 boot();
 </script>
