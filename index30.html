@@ -1646,7 +1646,7 @@ async function openConvo(otherUid){
       <div style="position:relative;flex-shrink:0">
         <div id="chat-pin-panel" style="display:none;position:absolute;bottom:100%;left:16px;right:16px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px;margin-bottom:8px;flex-wrap:wrap;justify-content:center;gap:6px;max-height:220px;overflow-y:auto"></div>
         <div style="padding:10px 16px 16px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--card)">
-          <button id="chat-pin-btn" class="pic-btn" title="Envoyer une emote">📌</button>
+          <button id="chat-pin-btn" class="pic-btn" title="Envoyer une emote" style="line-height:1"><span style="display:inline-block;transform:translateY(-1px)">📌</span></button>
           <input id="chat-input" placeholder="Écrire un message…" style="flex:1;padding:11px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:.88rem;outline:none;transition:border-color .18s"/>
           <button id="chat-send" style="padding:11px 18px;border-radius:12px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-weight:700;cursor:pointer;font-size:.88rem">↑</button>
         </div>
@@ -1749,8 +1749,8 @@ async function openConvo(otherUid){
     renderChat();
     try{
       await set(ref(db,`spk3/msgs/${cid}/${msgKey}`),msg);
-      await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:'📌 Emote',lastAt:Date.now(),lastFrom:myId,read:true});
-      await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:'📌 Emote',lastAt:Date.now(),lastFrom:myId,read:false});
+      await set(ref(db,`spk3/convos/${myId}/${otherUid}`),{uid:otherUid,avatar:otherData.avatar||DEFAV,lastMsg:'Emote',lastAt:Date.now(),lastFrom:myId,read:true});
+      await set(ref(db,`spk3/convos/${otherUid}/${myId}`),{uid:myId,avatar:myData.avatar||DEFAV,lastMsg:'Emote',lastAt:Date.now(),lastFrom:myId,read:false});
     }catch(err){
       delete localMsgs[msgKey];
       renderChat();
