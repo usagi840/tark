@@ -720,6 +720,102 @@ $('top-av').addEventListener('click',()=>showProfile(myId));
 
 function showQuetes(){
   showPage('quetes');
+  const page=$('page-quetes');
+  if(!page) return;
+
+  if(!myData.bsVerified){
+    page.innerHTML=`
+      <div style="max-width:620px;margin:0 auto;width:100%;padding:60px 24px 100px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+        <div style="font-size:2.6rem">🎯</div>
+        <div style="font-family:'Fraunces',serif;font-size:1.25rem;font-weight:600;color:var(--text)">Débloque les quêtes</div>
+        <div style="font-size:.86rem;color:var(--text2);max-width:320px;line-height:1.5">Vérifie ton compte Brawl Stars pour suivre tes quêtes et réclamer des icônes de profil exclusives.</div>
+        <button id="quetes-verify-btn" class="btn-main" style="width:auto;padding:13px 26px;margin-top:6px">Vérifier mon compte</button>
+      </div>`;
+    $('quetes-verify-btn').addEventListener('click', openVerifyModal);
+    return;
+  }
+
+  page.innerHTML=`
+    <div style="max-width:620px;margin:0 auto;width:100%;padding:16px 16px 100px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text)">Quêtes</div>
+      <div id="quetes-list" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Chargement…</div>
+      </div>
+    </div>`;
+  loadQuetes();
+}
+
+const QUEST_DEFS=[
+  {id:'mondiale',  title:'Collectionneur',  desc:'Débloque tous les brawlers', minPower:0},
+  {id:'lunaire',   title:'Power 7',         desc:'Passe tous tes brawlers en Power 7',  minPower:7},
+  {id:'martienne', title:'Power 9',         desc:'Passe tous tes brawlers en Power 9',  minPower:9},
+  {id:'saturnale', title:'Power 11',        desc:'Passe tous tes brawlers en Power 11', minPower:11},
+];
+
+async function loadQuetes(){
+  const list=$('quetes-list');
+  if(!list) return;
+  try{
+    const [player, collSnap] = await Promise.all([
+      fetchBsPlayer(myData.bsTag),
+      get(ref(db,`spk3/users/${myId}/collection`))
+    ]);
+    const owned = collSnap.exists()?collSnap.val():{};
+    const brawlers = player.brawlers||[];
+    const total = BRAWLERS.length;
+    renderQuetes(QUEST_DEFS.map(q=>{
+      const progress = q.minPower===0 ? brawlers.length : brawlers.filter(b=>(b.power||0)>=q.minPower).length;
+      return {...q, progress, total, done:progress>=total, claimed:!!owned[q.id]};
+    }));
+  }catch(e){
+    list.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Impossible de charger tes quêtes. Réessaie plus tard.</div>`;
+  }
+}
+
+function renderQuetes(quests){
+  const list=$('quetes-list');
+  if(!list) return;
+  list.innerHTML=quests.map(q=>{
+    const icon=FAME_ICONS.find(f=>f.id===q.id);
+    const pct=Math.min(100,Math.round((q.progress/q.total)*100));
+    let btnHTML;
+    if(q.claimed){
+      btnHTML=`<button disabled style="padding:9px 14px;border-radius:10px;border:none;background:var(--bg2);color:var(--text3);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:default;white-space:nowrap">Récupérée ✓</button>`;
+    }else if(q.done){
+      btnHTML=`<button data-claim="${q.id}" style="padding:9px 14px;border-radius:10px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">Réclamer</button>`;
+    }else{
+      btnHTML=`<button disabled style="padding:9px 14px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--text3);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:default;white-space:nowrap">Verrouillée</button>`;
+    }
+    return `
+    <div class="scard" style="padding:16px;display:flex;gap:14px;align-items:center">
+      <img src="${icon?icon.img:''}" style="width:46px;height:46px;object-fit:contain;border-radius:50%;background:var(--bg2);flex-shrink:0;opacity:${q.done?1:.45}"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:.9rem;color:var(--text)">${esc(q.title)}</div>
+        <div style="font-size:.76rem;color:var(--text2);margin-bottom:8px">${esc(q.desc)}</div>
+        <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent);transition:width .3s"></div>
+        </div>
+        <div style="font-size:.7rem;color:var(--text3);margin-top:4px">${q.progress}/${q.total}</div>
+      </div>
+      ${btnHTML}
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('[data-claim]').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const id=btn.dataset.claim;
+      btn.disabled=true; btn.textContent='...';
+      try{
+        await update(ref(db,`spk3/users/${myId}/collection`),{[id]:true});
+        const icon=FAME_ICONS.find(f=>f.id===id);
+        toast(`Icône "${icon?icon.name:id}" ajoutée à ta collection !`,'ok');
+        loadQuetes();
+      }catch(e){
+        toast('Erreur, réessaie','err');
+        btn.disabled=false; btn.textContent='Réclamer';
+      }
+    });
+  });
 }
 // btn-new-post removed
 
