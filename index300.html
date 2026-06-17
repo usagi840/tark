@@ -750,7 +750,7 @@ const QUEST_DEFS=[
   {id:'lunaire',   title:'Power 7',         desc:'Passe 100 brawlers en Power 7',  type:'power', minPower:7},
   {id:'martienne', title:'Power 9',         desc:'Passe 100 brawlers en Power 9',  type:'power', minPower:9},
   {id:'saturnale', title:'Power 11',        desc:'Passe 100 brawlers en Power 11', type:'power', minPower:11},
-  {id:'solaire',   title:'Gloire Solaire',  desc:"Débloque l'Hypercharge de 100 brawlers", type:'hyper'},
+  {id:'starrspecial', title:'Starr Spécial', desc:'Sois qualifié pour un Championship Challenge', type:'bool'},
 ];
 
 async function loadQuetes(){
@@ -765,10 +765,13 @@ async function loadQuetes(){
     const brawlers = player.brawlers||[];
     const total = 100;
     renderQuetes(QUEST_DEFS.map(q=>{
+      if(q.type==='bool'){
+        const done=!!player.isQualifiedFromChampionshipChallenge;
+        return {...q, progress:done?1:0, total:1, done, claimed:!!owned[q.id]};
+      }
       let raw;
       if(q.type==='count') raw=brawlers.length;
-      else if(q.type==='power') raw=brawlers.filter(b=>(b.power||0)>=q.minPower).length;
-      else raw=brawlers.filter(b=>(b.hypercharge||b.hyperchargeLevel||0)>0).length;
+      else raw=brawlers.filter(b=>(b.power||0)>=q.minPower).length;
       const progress=Math.min(raw,total);
       return {...q, progress, total, done:raw>=total, claimed:!!owned[q.id]};
     }));
@@ -783,6 +786,7 @@ function renderQuetes(quests){
   list.innerHTML=quests.map(q=>{
     const icon=FAME_ICONS.find(f=>f.id===q.id);
     const pct=Math.min(100,Math.round((q.progress/q.total)*100));
+    const progressLabel = q.type==='bool' ? (q.done?'Qualifié ✓':'Non qualifié') : `${q.progress}/${q.total}`;
     let btnHTML;
     if(q.claimed){
       btnHTML=`<button disabled style="padding:9px 14px;border-radius:10px;border:none;background:var(--bg2);color:var(--text3);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:default;white-space:nowrap">Récupérée ✓</button>`;
@@ -800,7 +804,7 @@ function renderQuetes(quests){
         <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden">
           <div style="height:100%;width:${pct}%;background:var(--accent);transition:width .3s"></div>
         </div>
-        <div style="font-size:.7rem;color:var(--text3);margin-top:4px">${q.progress}/${q.total}</div>
+        <div style="font-size:.7rem;color:var(--text3);margin-top:4px">${progressLabel}</div>
       </div>
       ${btnHTML}
     </div>`;
