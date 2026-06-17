@@ -750,7 +750,7 @@ const QUEST_DEFS=[
   {id:'lunaire',   title:'Power 7',         desc:'Passe 100 brawlers en Power 7',  type:'power', minPower:7},
   {id:'martienne', title:'Power 9',         desc:'Passe 100 brawlers en Power 9',  type:'power', minPower:9},
   {id:'saturnale', title:'Power 11',        desc:'Passe 100 brawlers en Power 11', type:'power', minPower:11},
-  {id:'starrspecial', title:'Starr Spécial', desc:'Sois qualifié pour un Championship Challenge', type:'bool'},
+  {id:'starrspecial', title:'Starr Spécial', desc:'Qualifie-toi pour un Championship Challenge (15 victoires avant 4 défaites)', type:'bool'},
 ];
 
 async function loadQuetes(){
@@ -767,7 +767,7 @@ async function loadQuetes(){
     renderQuetes(QUEST_DEFS.map(q=>{
       if(q.type==='bool'){
         const done=!!player.isQualifiedFromChampionshipChallenge;
-        return {...q, progress:done?1:0, total:1, done, claimed:!!owned[q.id]};
+        return {...q, progress:done?15:0, total:15, done, claimed:!!owned[q.id]};
       }
       let raw;
       if(q.type==='count') raw=brawlers.length;
@@ -786,7 +786,7 @@ function renderQuetes(quests){
   list.innerHTML=quests.map(q=>{
     const icon=FAME_ICONS.find(f=>f.id===q.id);
     const pct=Math.min(100,Math.round((q.progress/q.total)*100));
-    const progressLabel = q.type==='bool' ? (q.done?'Qualifié ✓':'Non qualifié') : `${q.progress}/${q.total}`;
+    const progressLabel = `${q.progress}/${q.total}`;
     let btnHTML;
     if(q.claimed){
       btnHTML=`<button disabled style="padding:9px 14px;border-radius:10px;border:none;background:var(--bg2);color:var(--text3);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:default;white-space:nowrap">Récupérée ✓</button>`;
@@ -2900,11 +2900,22 @@ function pickRandomIcon(exclude=[]){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
+// ── Traduction des rangs Ranked (API renvoie l'anglais) ───────
+const RANK_FR={BRONZE:'Bronze',SILVER:'Argent',GOLD:'Or',DIAMOND:'Diamant',MYTHIC:'Mythique',LEGENDARY:'Légendaire',MASTERS:'Maître',PRO:'Pro'};
+function translateRank(name){
+  if(!name) return name;
+  const parts=String(name).trim().split(' ');
+  const fr=RANK_FR[parts[0].toUpperCase()];
+  if(!fr) return name;
+  const sub=parts.slice(1).join(' ');
+  return sub ? `${fr} ${sub}` : fr;
+}
+
 async function refreshBsStats(){
   try{
     const player = await fetchBsPlayer(myData.bsTag);
     const trophies = player.trophies ?? myData.statTrophees;
-    const ranked = player.rankedRankName ?? player.rankedRank ?? myData.statRanked;
+    const ranked = translateRank(player.rankedRankName) ?? player.rankedRank ?? myData.statRanked;
     await update(ref(db,`spk3/users/${myId}`),{
       statTrophees: String(trophies),
       statRanked: ranked ? String(ranked) : myData.statRanked
@@ -3056,7 +3067,7 @@ function renderVerifyStep(){
         const player=await fetchBsPlayer(verifyState.tag);
         if(player.icon?.id===verifyState.targetIcon2){
           const trophies=player.trophies??'—';
-          const ranked=player.rankedRankName??'—';
+          const ranked=translateRank(player.rankedRankName)??'—';
           await update(ref(db,`spk3/users/${myId}`),{
             bsTag:verifyState.tag,
             bsVerified:true,
