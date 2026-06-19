@@ -1797,6 +1797,7 @@ async function openConvo(otherUid){
   const renderChat=()=>{
     const box=$('chat-msgs');
     if(!box) return;
+    const wasNearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     const list=Object.keys(localMsgs).map(k=>({id:k,...localMsgs[k]})).sort((a,b)=>(a.at||0)-(b.at||0));
     if(!list.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.82rem">Dis bonjour 👋</div>'; return; }
     box.innerHTML=list.map(m=>{
@@ -1810,7 +1811,7 @@ async function openConvo(otherUid){
         <div style="max-width:72%;padding:9px 13px;border-radius:${mine?'16px 16px 4px 16px':'16px 16px 16px 4px'};background:${mine?'var(--accent)':'var(--card)'};color:${mine?'white':'var(--text)'};font-size:.88rem;box-shadow:var(--shadow)">${esc(m.text)}</div>
       </div>`;
     }).join('');
-    box.scrollTop=box.scrollHeight;
+    if(wasNearBottom) box.scrollTop=box.scrollHeight;
   };
 
   const syncChat=async()=>{
