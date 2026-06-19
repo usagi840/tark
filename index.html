@@ -1795,12 +1795,15 @@ async function openConvo(otherUid){
       </div>
     </div>`;
 
+  const typingRef=ref(db,`spk3/typing/${cid}/${myId}`);
+  const typingOtherRef=ref(db,`spk3/typing/${cid}/${otherUid}`);
+
   $('convo-back').addEventListener('click', ()=>{
     openConvoSeq++;
     currentChatCid=null;
     if(chatSyncTimer){ clearInterval(chatSyncTimer); chatSyncTimer=null; }
     if(currentChatRef){ off(currentChatRef); currentChatRef=null; }
-    if(typingRef){ set(typingRef,null).catch(()=>{}); off(typingOtherRef); typingRef=null; typingOtherRef=null; }
+    if(typingRef){ set(typingRef,null).catch(()=>{}); off(typingOtherRef); }
     if(typingStopTimer){ clearTimeout(typingStopTimer); typingStopTimer=null; }
     if(tickTimer){ clearInterval(tickTimer); tickTimer=null; }
     showMessages();
@@ -1816,8 +1819,6 @@ async function openConvo(otherUid){
   const chatRef=ref(db,`spk3/msgs/${cid}`);
   currentChatRef=chatRef;
   let localMsgs={}; // key -> msg
-  const typingRef=ref(db,`spk3/typing/${cid}/${myId}`);
-  const typingOtherRef=ref(db,`spk3/typing/${cid}/${otherUid}`);
   let typingStopTimer=null;
   let tickTimer=null;
 
