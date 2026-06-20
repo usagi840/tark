@@ -45,9 +45,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
   height: 100vh !important;
   height: 100dvh !important;
   display: flex !important;
-  flex-direction: column !important; /* Force le titre à se mettre AU-DESSUS de la carte */
+  flex-direction: column !important; /* Aligne le titre en haut, la carte en dessous */
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: center !important; /* Centre le tout verticalement */
   padding: 20px;
   background: linear-gradient(135deg,#fff8f6 0%,#f6f5f0 50%,#f0f5ff 100%);
   opacity: 0; pointer-events: none;
@@ -60,16 +60,19 @@ body{display:flex;flex-direction:column;min-height:100vh}
 .auth-wrap{
   width: 100%;
   max-width: 420px;
-  margin: 0 auto !important; /* Enlève tout décalage parasite */
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important; /* Sécurité pour le titre et la carte */
+  align-items: center !important;
 }
 
-.auth-brand{text-align:center;margin-bottom:32px}
+.auth-brand{text-align:center;margin-bottom:32px;width:100%}
 .auth-brand .brand-name{font-family:'Fraunces',serif;font-size:2.8rem;font-weight:600;
   color:var(--text);letter-spacing:-1px;line-height:1}
 .auth-brand .brand-name span{color:var(--accent);font-style:italic}
 .auth-brand p{font-size:.88rem;color:var(--text2);margin-top:8px}
 
-.auth-card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-lg);overflow:hidden}
+.auth-card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-lg);overflow:hidden;width:100%}
 
 .auth-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
 .auth-tab{padding:16px;border:none;background:none;font-family:'Outfit',sans-serif;
