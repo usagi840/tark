@@ -57,7 +57,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
 #auth-screen.visible { 
   opacity: 1 !important; 
   pointer-events: auto !important; 
-  display: block !important;
+  display: flex !important; 
+  align-items: center !important; 
+  justify-content: center !important; 
 }
 
 .auth-wrap {
@@ -65,11 +67,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
   max-width: 420px;
   padding: 20px;
   box-sizing: border-box;
-  margin: 0 auto;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  margin: auto;
 }
 
 .auth-brand { text-align: center; margin-bottom: 32px; }
@@ -715,6 +713,7 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
+  $('auth-screen').classList.remove('visible');
   $('auth-screen').classList.add('hidden');
   $('app').style.display='flex';
   $('app').style.flexDirection='column';
@@ -736,6 +735,7 @@ $('btn-logout')?.addEventListener('click',()=>{
   if(feedListener){off(ref(db,'spk3/posts'),'value',feedListener);feedListener=null;}
   myId=null;myData=null;clearS();
   $('app').style.display='none';
+  $('auth-screen').classList.remove('hidden');
   $('auth-screen').classList.add('visible');
   switchTab('login');
 });
@@ -2961,6 +2961,7 @@ async function boot(){
     }catch(e){}
     clearS();
   }
+  $('auth-screen').classList.remove('hidden');
   $('auth-screen').classList.add('visible');
 }
 
