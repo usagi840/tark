@@ -38,32 +38,33 @@ body{display:flex;flex-direction:column;min-height:100vh}
    AUTH
 ════════════════════════════ */
 #auth-screen {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  background: linear-gradient(135deg,#fff8f6 0%,#f6f5f0 50%,#f0f5ff 100%) !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg,#fff8f6 0%,#f6f5f0 50%,#f0f5ff 100%);
   opacity: 0;
   pointer-events: none;
   transition: opacity .15s;
-  z-index: 9999 !important;
+  z-index: 9999;
 }
 #auth-screen.hidden { display: none !important; }
-#auth-screen.visible { opacity: 1 !important; pointer-events: auto !important; display: block !important; }
+
+/* Quand l'écran devient visible, on force le mode Flex au centre */
+#auth-screen.visible { 
+  opacity: 1 !important; 
+  pointer-events: auto !important; 
+  display: flex !important; 
+  align-items: center !important; 
+  justify-content: center !important; 
+}
 
 .auth-wrap {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important; /* Aligne le milieu exact de la carte au milieu exact de l'écran */
-  width: 100% !important;
-  max-width: 420px !important;
-  padding: 0 20px !important;
-  box-sizing: border-box !important;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .auth-brand { text-align: center; margin-bottom: 32px; }
