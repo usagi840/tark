@@ -1,8 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script>
+// Force un rechargement avec un paramètre unique si la page semble venir du cache (WebView Android)
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  if (!params.has('_v')) {
+    var sep = window.location.search ? '&' : '?';
+    var freshUrl = window.location.pathname + window.location.search + sep + '_v=' + Date.now() + window.location.hash;
+    window.location.replace(freshUrl);
+  }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Tark - Recherche mates pour Brawl Stars</title>
 <meta name="description" content="Trouve des mates Brawl Stars de ton niveaux, fini les randoms grace a Tark.">
 <link rel="icon" type="image/png" href="icon.png">
