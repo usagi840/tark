@@ -34,28 +34,48 @@
 
 html,body{min-height:100%;font-family:'Outfit',sans-serif;font-size:15px;color:var(--text);background:var(--bg)}
 body{display:flex;flex-direction:column;min-height:100vh}
-
 /* ════════════════════════════
    AUTH
 ════════════════════════════ */
-#auth-screen{
-  display:flex;min-height:100vh;opacity:0;pointer-events:none;
-  background:linear-gradient(135deg,#fff8f6 0%,#f6f5f0 50%,#f0f5ff 100%);
-  align-items:center;justify-content:center;padding:20px;
-  transition:opacity .15s;
+#auth-screen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(135deg,#fff8f6 0%,#f6f5f0 50%,#f0f5ff 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 9999;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-#auth-screen.hidden{display:none!important}
-#auth-screen.visible{opacity:1;pointer-events:auto;}
+#auth-screen.hidden { display: none !important; }
 
-.auth-wrap{width:100%;max-width:420px}
+/* Quand l'écran devient visible, on force le mode Flex au centre */
+#auth-screen.visible { 
+  opacity: 1 !important; 
+  pointer-events: auto !important; 
+  display: flex !important; 
+  align-items: center !important; 
+  justify-content: center !important; 
+}
 
-.auth-brand{text-align:center;margin-bottom:32px}
-.auth-brand .brand-name{font-family:'Fraunces',serif;font-size:2.8rem;font-weight:600;
-  color:var(--text);letter-spacing:-1px;line-height:1}
-.auth-brand .brand-name span{color:var(--accent);font-style:italic}
-.auth-brand p{font-size:.88rem;color:var(--text2);margin-top:8px}
+.auth-wrap {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  box-sizing: border-box;
+  margin: auto;
+}
 
-.auth-card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-lg);overflow:hidden}
+.auth-brand { text-align: center; margin-bottom: 32px; }
+.auth-brand .brand-name { font-family: 'Fraunces',serif; font-size: 2.8rem; font-weight: 600; color: var(--text); letter-spacing: -1px; line-height: 1; }
+.auth-brand .brand-name span { color: var(--accent); font-style: italic; }
+.auth-brand p { font-size: .88rem; color: var(--text2); margin-top: 8px; }
+
+.auth-card { background: var(--card); border-radius: 24px; box-shadow: var(--shadow-lg); overflow: hidden; width: 100%; }
 
 .auth-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
 .auth-tab{padding:16px;border:none;background:none;font-family:'Outfit',sans-serif;
@@ -466,6 +486,9 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="brand" id="logo-home">Tark</div>
     <div class="topbar-r">
+      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
       <img class="top-av" id="top-av" src="" alt="Mon profil"/>
     </div>
   </div>
@@ -588,6 +611,36 @@ function toast(msg,type=''){
   setTimeout(()=>{t.className='toast'+(type?' '+type:'');},2800);
 }
 
+// ── CONFIRMATION CUSTOM (remplace window.confirm) ───────────
+function confirmCustom(message, opts={}){
+  return new Promise(resolve=>{
+    const old=document.getElementById('confirm-modal');
+    if(old) old.remove();
+
+    const danger = opts.danger!==false; // par défaut le bouton OK est rouge (action destructive)
+    const okLabel = opts.okLabel || 'OK';
+    const cancelLabel = opts.cancelLabel || 'Annuler';
+
+    const overlay=document.createElement('div');
+    overlay.id='confirm-modal';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML=`
+      <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
+        <div style="font-size:.92rem;color:var(--text);line-height:1.5;white-space:pre-line;margin-bottom:18px">${esc(message)}</div>
+        <div style="display:flex;gap:8px">
+          <button data-confirm-cancel style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">${esc(cancelLabel)}</button>
+          <button data-confirm-ok style="flex:1;padding:11px;border-radius:11px;border:none;background:${danger?'var(--red)':'var(--accent)'};color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">${esc(okLabel)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const finish=val=>{ overlay.remove(); resolve(val); };
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) finish(false); });
+    overlay.querySelector('[data-confirm-cancel]').addEventListener('click', ()=>finish(false));
+    overlay.querySelector('[data-confirm-ok]').addEventListener('click', ()=>finish(true));
+  });
+}
+
 // ── COMPRESS ───────────────────────────────────────────────
 function compress(file,maxW=900,q=0.72){
   return new Promise(res=>{
@@ -694,6 +747,7 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
+  $('auth-screen').classList.remove('visible');
   $('auth-screen').classList.add('hidden');
   $('app').style.display='flex';
   $('app').style.flexDirection='column';
@@ -711,13 +765,153 @@ function bootApp(){
 }
 
 // ── LOGOUT ─────────────────────────────────────────────────
-$('btn-logout')?.addEventListener('click',()=>{
+function doLogout(){
   if(feedListener){off(ref(db,'spk3/posts'),'value',feedListener);feedListener=null;}
   myId=null;myData=null;clearS();
   $('app').style.display='none';
+  $('auth-screen').classList.remove('hidden');
   $('auth-screen').classList.add('visible');
   switchTab('login');
-});
+}
+
+// ── PARAMÈTRES (langue / déconnexion / suppression / mdp) ──
+const LANGS=[
+  {code:'fr',label:'🇫🇷 Français',file:'fr.html'},
+  {code:'en',label:'🇬🇧 English',file:'index.html'},
+];
+function closeSettingsMenu(){ document.getElementById('settings-menu')?.remove(); }
+
+function openSettingsMenu(){
+  closeSettingsMenu();
+  const overlay=document.createElement('div');
+  overlay.id='settings-menu';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
+  const langRows=LANGS.map(l=>`<button data-lang="${l.file}" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${l.label}</button>`).join('<div style="height:1px;background:var(--border);margin:0 16px"></div>');
+  overlay.innerHTML=`
+    <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto">
+      <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
+      <div style="padding:6px 16px 4px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2)">Langue</div>
+      ${langRows}
+      <div style="height:8px"></div>
+      <div style="height:1px;background:var(--border);margin:0 16px"></div>
+      <button data-act="pwd" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🔒 Changer le mot de passe</button>
+      <div style="height:1px;background:var(--border);margin:0 16px"></div>
+      <button data-act="logout" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚪 Se déconnecter</button>
+      <div style="height:1px;background:var(--border);margin:0 16px"></div>
+      <button data-act="delete" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--red);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🗑️ Supprimer mon compte</button>
+      <div style="height:1px;background:var(--border);margin:0 16px"></div>
+      <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) closeSettingsMenu(); });
+  overlay.querySelector('[data-act="cancel"]').addEventListener('click', closeSettingsMenu);
+  overlay.querySelectorAll('[data-lang]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ window.location.href=btn.dataset.lang; });
+  });
+  overlay.querySelector('[data-act="logout"]').addEventListener('click', async ()=>{
+    closeSettingsMenu();
+    const ok=await confirmCustom('Se déconnecter ?', {okLabel:'Se déconnecter', danger:false});
+    if(ok) doLogout();
+  });
+  overlay.querySelector('[data-act="delete"]').addEventListener('click', ()=>{
+    closeSettingsMenu();
+    openDeleteAccountModal();
+  });
+  overlay.querySelector('[data-act="pwd"]').addEventListener('click', ()=>{
+    closeSettingsMenu();
+    openChangePasswordModal();
+  });
+}
+$('btn-settings')?.addEventListener('click', openSettingsMenu);
+
+// ── CHANGER LE MOT DE PASSE ─────────────────────────────────
+function openChangePasswordModal(){
+  const old=document.getElementById('pwd-modal');
+  if(old) old.remove();
+  const overlay=document.createElement('div');
+  overlay.id='pwd-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`
+    <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text);margin-bottom:14px">Changer le mot de passe</div>
+      <div class="field"><label>Mot de passe actuel</label><input class="inp" type="password" id="pwd-old" placeholder="••••••" autocomplete="current-password"/></div>
+      <div class="field"><label>Nouveau mot de passe</label><input class="inp" type="password" id="pwd-new" placeholder="••••••" autocomplete="new-password"/></div>
+      <div class="field"><label>Confirme le nouveau mot de passe</label><input class="inp" type="password" id="pwd-new2" placeholder="••••••" autocomplete="new-password"/></div>
+      <div class="auth-err" id="pwd-err" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button id="pwd-cancel" style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">Annuler</button>
+        <button id="pwd-confirm" style="flex:1;padding:11px;border-radius:11px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Valider</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#pwd-cancel').addEventListener('click', ()=>overlay.remove());
+  overlay.querySelector('#pwd-confirm').addEventListener('click', async ()=>{
+    const errEl=overlay.querySelector('#pwd-err');
+    errEl.textContent='';
+    const oldPwd=overlay.querySelector('#pwd-old').value;
+    const newPwd=overlay.querySelector('#pwd-new').value;
+    const newPwd2=overlay.querySelector('#pwd-new2').value;
+    if(!oldPwd||!newPwd||!newPwd2){errEl.textContent='Remplis tous les champs';return;}
+    if(myData.pwd!==btoa(unescape(encodeURIComponent(oldPwd)))){errEl.textContent='Mot de passe actuel incorrect';return;}
+    if(newPwd.length<4){errEl.textContent='Nouveau mot de passe trop court (4 min)';return;}
+    if(newPwd!==newPwd2){errEl.textContent='Les nouveaux mots de passe ne correspondent pas';return;}
+    const btn=overlay.querySelector('#pwd-confirm');
+    btn.disabled=true;btn.textContent='...';
+    try{
+      const hashed=btoa(unescape(encodeURIComponent(newPwd)));
+      await update(ref(db,`spk3/users/${myId}`),{pwd:hashed});
+      myData.pwd=hashed;
+      overlay.remove();
+      toast('Mot de passe mis à jour !','ok');
+    }catch(e){
+      errEl.textContent='Erreur réseau, réessaie';
+      btn.disabled=false;btn.textContent='Valider';
+    }
+  });
+}
+
+// ── SUPPRIMER MON COMPTE ────────────────────────────────────
+function openDeleteAccountModal(){
+  const old=document.getElementById('delacc-modal');
+  if(old) old.remove();
+  const overlay=document.createElement('div');
+  overlay.id='delacc-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`
+    <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--red);margin-bottom:8px">Supprimer mon compte</div>
+      <div style="font-size:.86rem;color:var(--text2);line-height:1.5;margin-bottom:14px">Cette action est irréversible. Entre ton mot de passe pour confirmer.</div>
+      <div class="field"><label>Mot de passe</label><input class="inp" type="password" id="delacc-pwd" placeholder="••••••" autocomplete="current-password"/></div>
+      <div class="auth-err" id="delacc-err" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button id="delacc-cancel" style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">Annuler</button>
+        <button id="delacc-confirm" style="flex:1;padding:11px;border-radius:11px;border:none;background:var(--red);color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Supprimer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#delacc-cancel').addEventListener('click', ()=>overlay.remove());
+  overlay.querySelector('#delacc-confirm').addEventListener('click', async ()=>{
+    const errEl=overlay.querySelector('#delacc-err');
+    errEl.textContent='';
+    const pwd=overlay.querySelector('#delacc-pwd').value;
+    if(!pwd){errEl.textContent='Entre ton mot de passe';return;}
+    if(myData.pwd!==btoa(unescape(encodeURIComponent(pwd)))){errEl.textContent='Mot de passe incorrect';return;}
+    if(myId===ADMIN_ID){errEl.textContent='Le compte admin ne peut pas être supprimé';return;}
+    const btn=overlay.querySelector('#delacc-confirm');
+    btn.disabled=true;btn.textContent='Suppression...';
+    try{
+      await remove(ref(db,`spk3/users/${myId}`));
+      overlay.remove();
+      toast('Compte supprimé','ok');
+      doLogout();
+    }catch(e){
+      errEl.textContent='Erreur réseau, réessaie';
+      btn.disabled=false;btn.textContent='Supprimer';
+    }
+  });
+}
 
 // ── NAV ────────────────────────────────────────────────────
 function showPage(p){
@@ -950,7 +1144,7 @@ function bindFeed(){
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')sendComment(inp.id.replace('cinp-',''));}));
   document.querySelectorAll('.del-btn').forEach(btn=>
     btn.addEventListener('click',async()=>{
-      if(!confirm('Supprimer ?')) return;
+      if(!(await confirmCustom('Supprimer ?'))) return;
       await remove(ref(db,`spk3/posts/${btn.dataset.del}`));
       toast('Supprimé');
     }));
@@ -1429,7 +1623,6 @@ function renderAnnonces(annonces){
   });
 }
 
-// ── PROFILE ────────────────────────────────────────────────
 // ── SIGNALEMENT (utilisateur ou message) ────────────────────
 const REPORT_REASONS=['Spam','Propos déplacés','Harcèlement','Faux profil / arnaque','Autre'];
 
@@ -1483,6 +1676,7 @@ function openReportModal(type, targetUid, extra={}){
   });
 }
 
+// ── PROFILE ────────────────────────────────────────────────
 async function showProfile(uid, fromMessages=false){
   showPage('profile');
   const isMe = uid === myId;
@@ -1592,7 +1786,7 @@ async function showProfile(uid, fromMessages=false){
     // Bouton désauthentifier
     const btnDeauth=$('btn-deauth-bs');
     if(btnDeauth) btnDeauth.addEventListener('click', async()=>{
-      if(!confirm('Se désauthentifier ? Tes trophées et rang redeviendront modifiables.')) return;
+      if(!(await confirmCustom('Se désauthentifier ? Tes trophées et rang redeviendront modifiables.', {okLabel:'Désauthentifier'}))) return;
       await update(ref(db,`spk3/users/${myId}`),{bsVerified:false,bsTag:null});
       myData.bsVerified=false;
       myData.bsTag=null;
@@ -1614,41 +1808,56 @@ async function showProfile(uid, fromMessages=false){
     const btnMoreP=$('btn-more-profile');
     if(btnMoreP){
       btnMoreP.addEventListener('click', async()=>{
-        const blockSnap=await get(ref(db,`spk3/blocks/${myId}/${uid}`));
-        const isBlocked=blockSnap.exists();
+        let isBlocked=(await get(ref(db,`spk3/blocks/${myId}/${uid}`))).exists();
 
         const old=document.getElementById('profile-action-menu');
         if(old) old.remove();
         const overlay=document.createElement('div');
         overlay.id='profile-action-menu';
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
-        overlay.innerHTML=`
-          <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
-            <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
-            <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
-            <div style="height:1px;background:var(--border);margin:0 16px"></div>
-            <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
-            <div style="height:1px;background:var(--border);margin:0 16px"></div>
-            <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
-          </div>`;
+
+        const renderMenu=()=>{
+          overlay.innerHTML=`
+            <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
+              <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
+              <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
+              <div style="height:1px;background:var(--border);margin:0 16px"></div>
+              <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
+              <div style="height:1px;background:var(--border);margin:0 16px"></div>
+              <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+            </div>`;
+          overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
+          overlay.querySelector('[data-act="block"]').addEventListener('click', async btnEvt=>{
+            const blockBtn=btnEvt.currentTarget;
+            blockBtn.disabled=true;
+            try{
+              if(isBlocked){
+                await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
+                toast(`@${uid} débloqué`,'ok');
+              }else{
+                overlay.style.display='none';
+                const ok=await confirmCustom(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`, {okLabel:'Bloquer'});
+                overlay.style.display='flex';
+                if(!ok){ blockBtn.disabled=false; return; }
+                await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
+                toast(`@${uid} bloqué`,'ok');
+              }
+              isBlocked=!isBlocked;
+              renderMenu(); // ré-affiche le menu avec le label à jour (Bloquer ↔ Débloquer)
+            }catch(err){
+              toast('Erreur, réessaie','err');
+              blockBtn.disabled=false;
+            }
+          });
+          overlay.querySelector('[data-act="report"]').addEventListener('click', ()=>{
+            overlay.remove();
+            openReportModal('user', uid);
+          });
+        };
+        renderMenu();
+
         document.body.appendChild(overlay);
         overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
-        overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
-        overlay.querySelector('[data-act="block"]').addEventListener('click', async()=>{
-          overlay.remove();
-          if(isBlocked){
-            await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
-            toast(`@${uid} débloqué`,'ok');
-          }else{
-            if(!confirm(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`)) return;
-            await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
-            toast(`@${uid} bloqué`,'ok');
-          }
-        });
-        overlay.querySelector('[data-act="report"]').addEventListener('click', ()=>{
-          overlay.remove();
-          openReportModal('user', uid);
-        });
       });
     }
   }
@@ -2003,7 +2212,7 @@ async function openConvo(otherUid){
     });
     overlay.querySelector('[data-act="delete"]')?.addEventListener('click', async()=>{
       overlay.remove();
-      if(!confirm('Supprimer ce message ?')) return;
+      if(!(await confirmCustom('Supprimer ce message ?'))) return;
       try{
         delete localMsgs[id];
         renderChat();
@@ -2116,13 +2325,12 @@ async function openConvo(otherUid){
 
   // Vérifie le blocage dans les deux sens ; retourne true si l'envoi est autorisé.
   // Met aussi à jour l'UI (input + bouton emote) en conséquence.
-  let blockChecked=false, blockedDirection=null; // null | 'me' | 'them'
+  let blockedDirection=null; // null | 'me' | 'them'
   const checkNotBlocked=async()=>{
     const [iBlockedThem, theyBlockedMe] = await Promise.all([
       get(ref(db,`spk3/blocks/${myId}/${otherUid}`)),
       get(ref(db,`spk3/blocks/${otherUid}/${myId}`))
     ]);
-    blockChecked=true;
     blockedDirection = iBlockedThem.exists() ? 'me' : (theyBlockedMe.exists() ? 'them' : null);
     applyBlockUI();
     if(blockedDirection==='me'){ toast(`Tu as bloqué @${otherUid}, débloque-le pour lui écrire`,'err'); return false; }
@@ -2141,9 +2349,7 @@ async function openConvo(otherUid){
     }
   };
   // Vérification initiale à l'ouverture de la conversation
-  (async()=>{
-    await checkNotBlocked();
-  })();
+  (async()=>{ await checkNotBlocked(); })();
 
   // Envoyer une emote (pin)
   const sendPin=async(n)=>{
@@ -2993,7 +3199,7 @@ function renderAdmUsers(search=''){
       // Vérifier que le nouveau pseudo n'est pas déjà pris
       const existSnap=await get(ref(db,`spk3/users/${newId}`));
       if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
-      if(!confirm(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`)) return;
+      if(!(await confirmCustom(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false}))) return;
       toast('Renommage en cours...');
       try{
         await renameUserHandle(oldId,newId);
@@ -3014,7 +3220,7 @@ function renderAdmUsers(search=''){
     btn.addEventListener('click',async e=>{
       e.stopPropagation();
       const uid=btn.dataset.delUser;
-      if(!confirm(`Supprimer le compte @${uid} et tous ses posts ?`)) return;
+      if(!(await confirmCustom(`Supprimer le compte @${uid} et tous ses posts ?`, {okLabel:'Supprimer'}))) return;
       btn.textContent='...';btn.disabled=true;
       // 1. Supprimer ses posts
       const toDelete=admPosts.filter(p=>p.uid===uid);
@@ -3052,7 +3258,7 @@ function renderAdmAnnonces(search=''){
   $('adm-list').querySelectorAll('[data-del-annonce]').forEach(btn=>
     btn.addEventListener('click',async e=>{
       e.stopPropagation();
-      if(!confirm('Supprimer cette annonce ?')) return;
+      if(!(await confirmCustom('Supprimer cette annonce ?'))) return;
       await remove(ref(db,`spk3/annonces/${btn.dataset.delAnnonce}`));
       admAnnonces=admAnnonces.filter(a=>a.id!==btn.dataset.delAnnonce);
       toast('Annonce supprimée','ok');
@@ -3103,7 +3309,7 @@ function renderAdmReports(search=''){
 
   $('adm-list').querySelectorAll('[data-del-reported-msg]').forEach(btn=>
     btn.addEventListener('click', async()=>{
-      if(!confirm('Supprimer ce message du chat ?')) return;
+      if(!(await confirmCustom('Supprimer ce message du chat ?'))) return;
       await remove(ref(db,`spk3/msgs/${btn.dataset.cid}/${btn.dataset.msgid}`));
       await update(ref(db,`spk3/reports/${btn.dataset.delReportedMsg}`),{status:'resolved'});
       const r=admReports.find(x=>x.id===btn.dataset.delReportedMsg);
@@ -3114,7 +3320,7 @@ function renderAdmReports(search=''){
 
   $('adm-list').querySelectorAll('[data-del-report]').forEach(btn=>
     btn.addEventListener('click', async()=>{
-      if(!confirm('Supprimer ce signalement ?')) return;
+      if(!(await confirmCustom('Supprimer ce signalement ?'))) return;
       await remove(ref(db,`spk3/reports/${btn.dataset.delReport}`));
       admReports=admReports.filter(r=>r.id!==btn.dataset.delReport);
       toast('Signalement supprimé','ok');
@@ -3231,6 +3437,7 @@ async function boot(){
     }catch(e){}
     clearS();
   }
+  $('auth-screen').classList.remove('hidden');
   $('auth-screen').classList.add('visible');
 }
 
