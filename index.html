@@ -608,6 +608,36 @@ function toast(msg,type=''){
   setTimeout(()=>{t.className='toast'+(type?' '+type:'');},2800);
 }
 
+// ── CONFIRMATION CUSTOM (remplace window.confirm) ───────────
+function confirmCustom(message, opts={}){
+  return new Promise(resolve=>{
+    const old=document.getElementById('confirm-modal');
+    if(old) old.remove();
+
+    const danger = opts.danger!==false; // par défaut le bouton OK est rouge (action destructive)
+    const okLabel = opts.okLabel || 'OK';
+    const cancelLabel = opts.cancelLabel || 'Annuler';
+
+    const overlay=document.createElement('div');
+    overlay.id='confirm-modal';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML=`
+      <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
+        <div style="font-size:.92rem;color:var(--text);line-height:1.5;white-space:pre-line;margin-bottom:18px">${esc(message)}</div>
+        <div style="display:flex;gap:8px">
+          <button data-confirm-cancel style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">${esc(cancelLabel)}</button>
+          <button data-confirm-ok style="flex:1;padding:11px;border-radius:11px;border:none;background:${danger?'var(--red)':'var(--accent)'};color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">${esc(okLabel)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const finish=val=>{ overlay.remove(); resolve(val); };
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) finish(false); });
+    overlay.querySelector('[data-confirm-cancel]').addEventListener('click', ()=>finish(false));
+    overlay.querySelector('[data-confirm-ok]').addEventListener('click', ()=>finish(true));
+  });
+}
+
 // ── COMPRESS ───────────────────────────────────────────────
 function compress(file,maxW=900,q=0.72){
   return new Promise(res=>{
@@ -972,7 +1002,7 @@ function bindFeed(){
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')sendComment(inp.id.replace('cinp-',''));}));
   document.querySelectorAll('.del-btn').forEach(btn=>
     btn.addEventListener('click',async()=>{
-      if(!confirm('Supprimer ?')) return;
+      if(!(await confirmCustom('Supprimer ?'))) return;
       await remove(ref(db,`spk3/posts/${btn.dataset.del}`));
       toast('Supprimé');
     }));
@@ -1614,7 +1644,7 @@ async function showProfile(uid, fromMessages=false){
     // Bouton désauthentifier
     const btnDeauth=$('btn-deauth-bs');
     if(btnDeauth) btnDeauth.addEventListener('click', async()=>{
-      if(!confirm('Se désauthentifier ? Tes trophées et rang redeviendront modifiables.')) return;
+      if(!(await confirmCustom('Se désauthentifier ? Tes trophées et rang redeviendront modifiables.', {okLabel:'Désauthentifier'}))) return;
       await update(ref(db,`spk3/users/${myId}`),{bsVerified:false,bsTag:null});
       myData.bsVerified=false;
       myData.bsTag=null;
@@ -1663,7 +1693,10 @@ async function showProfile(uid, fromMessages=false){
                 await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
                 toast(`@${uid} débloqué`,'ok');
               }else{
-                if(!confirm(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`)){ blockBtn.disabled=false; return; }
+                overlay.style.display='none';
+                const ok=await confirmCustom(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`, {okLabel:'Bloquer'});
+                overlay.style.display='flex';
+                if(!ok){ blockBtn.disabled=false; return; }
                 await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
                 toast(`@${uid} bloqué`,'ok');
               }
@@ -2037,7 +2070,7 @@ async function openConvo(otherUid){
     });
     overlay.querySelector('[data-act="delete"]')?.addEventListener('click', async()=>{
       overlay.remove();
-      if(!confirm('Supprimer ce message ?')) return;
+      if(!(await confirmCustom('Supprimer ce message ?'))) return;
       try{
         delete localMsgs[id];
         renderChat();
@@ -3024,7 +3057,7 @@ function renderAdmUsers(search=''){
       // Vérifier que le nouveau pseudo n'est pas déjà pris
       const existSnap=await get(ref(db,`spk3/users/${newId}`));
       if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
-      if(!confirm(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`)) return;
+      if(!(await confirmCustom(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false}))) return;
       toast('Renommage en cours...');
       try{
         await renameUserHandle(oldId,newId);
@@ -3045,7 +3078,7 @@ function renderAdmUsers(search=''){
     btn.addEventListener('click',async e=>{
       e.stopPropagation();
       const uid=btn.dataset.delUser;
-      if(!confirm(`Supprimer le compte @${uid} et tous ses posts ?`)) return;
+      if(!(await confirmCustom(`Supprimer le compte @${uid} et tous ses posts ?`, {okLabel:'Supprimer'}))) return;
       btn.textContent='...';btn.disabled=true;
       // 1. Supprimer ses posts
       const toDelete=admPosts.filter(p=>p.uid===uid);
@@ -3083,7 +3116,7 @@ function renderAdmAnnonces(search=''){
   $('adm-list').querySelectorAll('[data-del-annonce]').forEach(btn=>
     btn.addEventListener('click',async e=>{
       e.stopPropagation();
-      if(!confirm('Supprimer cette annonce ?')) return;
+      if(!(await confirmCustom('Supprimer cette annonce ?'))) return;
       await remove(ref(db,`spk3/annonces/${btn.dataset.delAnnonce}`));
       admAnnonces=admAnnonces.filter(a=>a.id!==btn.dataset.delAnnonce);
       toast('Annonce supprimée','ok');
@@ -3134,7 +3167,7 @@ function renderAdmReports(search=''){
 
   $('adm-list').querySelectorAll('[data-del-reported-msg]').forEach(btn=>
     btn.addEventListener('click', async()=>{
-      if(!confirm('Supprimer ce message du chat ?')) return;
+      if(!(await confirmCustom('Supprimer ce message du chat ?'))) return;
       await remove(ref(db,`spk3/msgs/${btn.dataset.cid}/${btn.dataset.msgid}`));
       await update(ref(db,`spk3/reports/${btn.dataset.delReportedMsg}`),{status:'resolved'});
       const r=admReports.find(x=>x.id===btn.dataset.delReportedMsg);
@@ -3145,7 +3178,7 @@ function renderAdmReports(search=''){
 
   $('adm-list').querySelectorAll('[data-del-report]').forEach(btn=>
     btn.addEventListener('click', async()=>{
-      if(!confirm('Supprimer ce signalement ?')) return;
+      if(!(await confirmCustom('Supprimer ce signalement ?'))) return;
       await remove(ref(db,`spk3/reports/${btn.dataset.delReport}`));
       admReports=admReports.filter(r=>r.id!==btn.dataset.delReport);
       toast('Signalement supprimé','ok');
