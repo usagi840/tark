@@ -198,6 +198,7 @@ textarea.inp{resize:vertical;min-height:72px}
   background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
   font-size:1rem;transition:all .2s;flex-shrink:0}
 .pic-btn:hover{border-color:var(--accent);background:var(--accentbg)}
+.pic-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ════════════════════════════
    POST CARD
@@ -1450,6 +1451,59 @@ function renderAnnonces(annonces){
   });
 }
 
+// ── SIGNALEMENT (utilisateur ou message) ────────────────────
+const REPORT_REASONS=['Spam','Propos déplacés','Harcèlement','Faux profil / arnaque','Autre'];
+
+function openReportModal(type, targetUid, extra={}){
+  // type: 'user' ou 'message'
+  const old=document.getElementById('report-modal');
+  if(old) old.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='report-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`
+    <div style="background:var(--card);border-radius:18px;padding:20px;max-width:380px;width:100%;box-shadow:var(--shadow-lg)">
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text);margin-bottom:4px">${type==='user'?`Signaler @${esc(targetUid)}`:'Signaler ce message'}</div>
+      <div style="font-size:.8rem;color:var(--text2);margin-bottom:14px">Choisis un motif</div>
+      <div id="report-reasons" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        ${REPORT_REASONS.map(r=>`<button data-reason="${esc(r)}" style="text-align:left;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:.85rem;cursor:pointer">${esc(r)}</button>`).join('')}
+      </div>
+      <button id="report-cancel" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.85rem;cursor:pointer">Annuler</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  $('report-cancel').addEventListener('click', ()=>overlay.remove());
+
+  overlay.querySelectorAll('[data-reason]').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const reason=btn.dataset.reason;
+      const report={
+        type, reason,
+        reportedBy: myId,
+        targetUid,
+        at: Date.now(),
+        status: 'pending'
+      };
+      if(type==='message'){
+        report.cid=extra.cid;
+        report.msgId=extra.msgId;
+        report.text=extra.text||'';
+        report.fromUid=extra.fromUid;
+      }
+      try{
+        const reportKey='r'+Date.now()+Math.random().toString(36).slice(2,8);
+        await set(ref(db,`spk3/reports/${reportKey}`),report);
+        toast('Signalement envoyé, merci','ok');
+      }catch(err){
+        toast('Erreur lors du signalement','err');
+      }
+      overlay.remove();
+    });
+  });
+}
+
 // ── PROFILE ────────────────────────────────────────────────
 async function showProfile(uid, fromMessages=false){
   showPage('profile');
@@ -1484,7 +1538,10 @@ async function showProfile(uid, fromMessages=false){
             <span id="profile-fullname-text">${esc(isMe?(myData.fullname||myId):uid)}</span>
           </div>
           <div style="font-size:.82rem;color:var(--text2);margin-bottom:${isMe?'16px':'12px'}">@${esc(uid)}</div>
-          ${!isMe?`<button id="btn-msg-profile" style="padding:9px 18px;border-radius:12px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(255,92,53,.3);margin-bottom:16px">💬 Envoyer un message</button>`:''}
+          ${!isMe?`<div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="btn-msg-profile" style="flex:1;padding:9px 18px;border-radius:12px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(255,92,53,.3)">💬 Envoyer un message</button>
+            <button id="btn-more-profile" title="Plus d'options" style="width:38px;height:38px;flex-shrink:0;border-radius:12px;border:1.5px solid var(--border);background:var(--card);color:var(--text2);font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">⋯</button>
+          </div>`:''}
           <!-- Stats Brawl Stars -->
           <div style="background:var(--bg);border-radius:12px;padding:14px 16px;border:1px solid var(--border)">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1573,6 +1630,50 @@ async function showProfile(uid, fromMessages=false){
   // Bouton message depuis profil
   const btnMsgP=$('btn-msg-profile');
   if(btnMsgP) btnMsgP.addEventListener('click',()=>{ showMessages(); openConvo(uid); });
+
+  // Bouton "⋯" (Bloquer/Débloquer, Signaler) — seulement sur le profil d'un autre utilisateur
+  if(!isMe){
+    const btnMoreP=$('btn-more-profile');
+    if(btnMoreP){
+      btnMoreP.addEventListener('click', async()=>{
+        const blockSnap=await get(ref(db,`spk3/blocks/${myId}/${uid}`));
+        const isBlocked=blockSnap.exists();
+
+        const old=document.getElementById('profile-action-menu');
+        if(old) old.remove();
+        const overlay=document.createElement('div');
+        overlay.id='profile-action-menu';
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
+        overlay.innerHTML=`
+          <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
+            <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
+            <div style="height:1px;background:var(--border);margin:0 16px"></div>
+            <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
+            <div style="height:1px;background:var(--border);margin:0 16px"></div>
+            <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+        overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
+        overlay.querySelector('[data-act="block"]').addEventListener('click', async()=>{
+          overlay.remove();
+          if(isBlocked){
+            await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
+            toast(`@${uid} débloqué`,'ok');
+          }else{
+            if(!confirm(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`)) return;
+            await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
+            toast(`@${uid} bloqué`,'ok');
+          }
+        });
+        overlay.querySelector('[data-act="report"]').addEventListener('click', ()=>{
+          overlay.remove();
+          openReportModal('user', uid);
+        });
+      });
+    }
+  }
 
   // Clic sur PDP + bannière (seulement si c'est son propre profil)
   if(isMe){
@@ -1852,19 +1953,89 @@ async function openConvo(otherUid){
     if(!list.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);font-size:.82rem">Dis bonjour 👋</div>'; return; }
     box.innerHTML=list.map(m=>{
       const mine=m.from===myId;
-      const ts=`<div style="font-size:.68rem;color:var(--text3);margin-top:2px;padding:0 4px">${timeAgo(m.at)}</div>`;
+      const editedTag = m.editedAt ? ' <span style="opacity:.6">(modifié)</span>' : '';
+      const ts=`<div style="font-size:.68rem;color:var(--text3);margin-top:2px;padding:0 4px">${timeAgo(m.at)}${editedTag}</div>`;
       if(m.pin){
-        return `<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'}">
-          <img src="mess/pin_default_${m.pin}.png" style="width:84px;height:84px;object-fit:contain;display:block" onerror="this.style.opacity='.25'"/>
+        return `<div data-msg-id="${m.id}" data-msg-mine="${mine?'1':'0'}" style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'};user-select:none;-webkit-user-select:none">
+          <img src="mess/pin_default_${m.pin}.png" style="width:84px;height:84px;object-fit:contain;display:block;pointer-events:none" onerror="this.style.opacity='.25'"/>
           ${ts}
         </div>`;
       }
-      return `<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'}">
-        <div style="max-width:72%;padding:9px 13px;border-radius:${mine?'16px 16px 4px 16px':'16px 16px 16px 4px'};background:${mine?'var(--accent)':'var(--card)'};color:${mine?'white':'var(--text)'};font-size:.88rem;box-shadow:var(--shadow)">${esc(m.text)}</div>
+      return `<div data-msg-id="${m.id}" data-msg-mine="${mine?'1':'0'}" style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'};user-select:none;-webkit-user-select:none">
+        <div style="max-width:72%;padding:9px 13px;border-radius:${mine?'16px 16px 4px 16px':'16px 16px 16px 4px'};background:${mine?'var(--accent)':'var(--card)'};color:${mine?'white':'var(--text)'};font-size:.88rem;box-shadow:var(--shadow);pointer-events:none">${esc(m.text)}</div>
         ${ts}
       </div>`;
     }).join('');
     if(wasNearBottom) box.scrollTop=box.scrollHeight;
+
+    // Appui long (mobile) / clic droit (desktop) sur un message → menu d'actions
+    box.querySelectorAll('[data-msg-id]').forEach(el=>{
+      let pressTimer=null;
+      const start=()=>{ pressTimer=setTimeout(()=>openMsgActionMenu(el.dataset.msgId, el.dataset.msgMine==='1'), 450); };
+      const cancel=()=>{ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } };
+      el.addEventListener('touchstart', start, {passive:true});
+      el.addEventListener('touchend', cancel);
+      el.addEventListener('touchmove', cancel);
+      el.addEventListener('mousedown', start);
+      el.addEventListener('mouseup', cancel);
+      el.addEventListener('mouseleave', cancel);
+      el.addEventListener('contextmenu', e=>{ e.preventDefault(); openMsgActionMenu(el.dataset.msgId, el.dataset.msgMine==='1'); });
+    });
+  };
+
+  // Menu contextuel d'actions sur un message (modifier/supprimer les siens, signaler ceux des autres)
+  const openMsgActionMenu=(id, mine)=>{
+    const m=localMsgs[id];
+    if(!m) return;
+    const old=document.getElementById('msg-action-menu');
+    if(old) old.remove();
+
+    const overlay=document.createElement('div');
+    overlay.id='msg-action-menu';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
+    const actions=[];
+    if(mine && !m.pin){
+      actions.push(`<button data-act="edit" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">✏️ Modifier</button>`);
+    }
+    if(mine){
+      actions.push(`<button data-act="delete" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--red);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🗑️ Supprimer</button>`);
+    }else{
+      actions.push(`<button data-act="report" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler</button>`);
+    }
+    overlay.innerHTML=`
+      <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
+        <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
+        ${actions.join('<div style="height:1px;background:var(--border);margin:0 16px"></div>')}
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
+        <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+
+    overlay.querySelector('[data-act="cancel"]')?.addEventListener('click', ()=>overlay.remove());
+    overlay.querySelector('[data-act="edit"]')?.addEventListener('click', ()=>{
+      overlay.remove();
+      const inp=$('chat-input');
+      if(!inp) return;
+      inp.value=m.text;
+      inp.focus();
+      inp.dataset.editingId=id;
+      const sendBtn=$('chat-send');
+      if(sendBtn) sendBtn.textContent='✓';
+    });
+    overlay.querySelector('[data-act="delete"]')?.addEventListener('click', async()=>{
+      overlay.remove();
+      if(!confirm('Supprimer ce message ?')) return;
+      try{
+        delete localMsgs[id];
+        renderChat();
+        await remove(ref(db,`spk3/msgs/${cid}/${id}`));
+      }catch(err){ toast('Erreur lors de la suppression','err'); }
+    });
+    overlay.querySelector('[data-act="report"]')?.addEventListener('click', ()=>{
+      overlay.remove();
+      openReportModal('message', otherUid, {cid, msgId:id, text:m.pin?`Emote ${m.pin}`:m.text, fromUid:m.from});
+    });
   };
   // Rafraîchit juste les horodatages affichés sans tout re-render (évite de couper le scroll)
   tickTimer=setInterval(()=>{
@@ -1912,6 +2083,24 @@ async function openConvo(otherUid){
     const inp=$('chat-input');
     const text=inp?.value.trim();
     if(!text) return;
+
+    // Mode édition d'un message existant
+    const editingId=inp.dataset.editingId;
+    if(editingId){
+      delete inp.dataset.editingId;
+      inp.value='';
+      const sendBtn=$('chat-send');
+      if(sendBtn) sendBtn.textContent='↑';
+      if(!localMsgs[editingId]) return;
+      localMsgs[editingId]={...localMsgs[editingId], text, editedAt:Date.now()};
+      renderChat();
+      try{
+        await update(ref(db,`spk3/msgs/${cid}/${editingId}`),{text, editedAt:Date.now()});
+      }catch(err){ toast('Erreur lors de la modification','err'); }
+      return;
+    }
+
+    if(!(await checkNotBlocked())) return;
     inp.value='';
     if(typingStopTimer){ clearTimeout(typingStopTimer); typingStopTimer=null; }
     set(typingRef,null).catch(()=>{});
@@ -1947,8 +2136,37 @@ async function openConvo(otherUid){
     }
   });
 
+  // Vérifie le blocage dans les deux sens ; retourne true si l'envoi est autorisé.
+  // Met aussi à jour l'UI (input + bouton emote) en conséquence.
+  let blockedDirection=null; // null | 'me' | 'them'
+  const checkNotBlocked=async()=>{
+    const [iBlockedThem, theyBlockedMe] = await Promise.all([
+      get(ref(db,`spk3/blocks/${myId}/${otherUid}`)),
+      get(ref(db,`spk3/blocks/${otherUid}/${myId}`))
+    ]);
+    blockedDirection = iBlockedThem.exists() ? 'me' : (theyBlockedMe.exists() ? 'them' : null);
+    applyBlockUI();
+    if(blockedDirection==='me'){ toast(`Tu as bloqué @${otherUid}, débloque-le pour lui écrire`,'err'); return false; }
+    if(blockedDirection==='them'){ toast(`Tu ne peux pas écrire à @${otherUid}`,'err'); return false; }
+    return true;
+  };
+  const applyBlockUI=()=>{
+    const inp=$('chat-input');
+    const pinB=$('chat-pin-btn');
+    if(blockedDirection==='me'){
+      if(inp){ inp.placeholder=`Tu as bloqué @${otherUid}`; inp.disabled=true; }
+      if(pinB) pinB.disabled=true;
+    }else if(blockedDirection==='them'){
+      if(inp){ inp.placeholder='Tu ne peux pas écrire ici'; inp.disabled=true; }
+      if(pinB) pinB.disabled=true;
+    }
+  };
+  // Vérification initiale à l'ouverture de la conversation
+  (async()=>{ await checkNotBlocked(); })();
+
   // Envoyer une emote (pin)
   const sendPin=async(n)=>{
+    if(!(await checkNotBlocked())) return;
     if(typingStopTimer){ clearTimeout(typingStopTimer); typingStopTimer=null; }
     set(typingRef,null).catch(()=>{});
     const msgKey='m'+Date.now()+Math.random().toString(36).slice(2,8);
@@ -2559,6 +2777,7 @@ let admTab = 'users';
 let admUsers = [];
 let admPosts = [];
 let admAnnonces = [];
+let admReports = [];
 let admListenersReady = false;
 
 function initAdminListeners(){
@@ -2577,17 +2796,23 @@ function initAdminListeners(){
 }
 
 async function fetchAdminData(){
-  const [usersSnap, postsSnap, annoncesSnap] = await Promise.all([
+  const [usersSnap, postsSnap, annoncesSnap, reportsSnap] = await Promise.all([
     get(ref(db,'spk3/users')),
     get(ref(db,'spk3/posts')),
-    get(ref(db,'spk3/annonces'))
+    get(ref(db,'spk3/annonces')),
+    get(ref(db,'spk3/reports'))
   ]);
-  admUsers=[];admPosts=[];admAnnonces=[];
+  admUsers=[];admPosts=[];admAnnonces=[];admReports=[];
   if(usersSnap.exists()) usersSnap.forEach(c=>{const u=c.val();if(u&&!u.redirectTo)admUsers.push({id:c.key,...u});});
   if(postsSnap.exists()) postsSnap.forEach(c=>{const p=c.val();if(p&&p.uid)admPosts.push({id:c.key,...p});});
   if(annoncesSnap.exists()) annoncesSnap.forEach(c=>{const a=c.val();if(a)admAnnonces.push({id:c.key,...a});});
+  if(reportsSnap.exists()) reportsSnap.forEach(c=>{const r=c.val();if(r)admReports.push({id:c.key,...r});});
   admPosts.sort((a,b)=>b.createdAt-a.createdAt);
   admAnnonces.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  admReports.sort((a,b)=>(b.at||0)-(a.at||0));
+  const pendingCount=admReports.filter(r=>r.status!=='resolved').length;
+  const badge=$('adm-reports-badge');
+  if(badge) badge.textContent = pendingCount>0 ? ` (${pendingCount})` : '';
   renderAdmTab($('adm-search').value.trim().toLowerCase());
 }
 
@@ -2610,6 +2835,7 @@ async function loadAdmin(){
           <button class="subs-tab active" data-adm-tab="users">Utilisateurs</button>
           <button class="subs-tab" data-adm-tab="annonces">Annonces</button>
           <button class="subs-tab" data-adm-tab="collection">Collection</button>
+          <button class="subs-tab" data-adm-tab="reports">Signalements <span id="adm-reports-badge"></span></button>
         </div>
       </div>
 
@@ -2626,6 +2852,7 @@ async function loadAdmin(){
 function renderAdmTab(search=''){
   if(admTab==='users') renderAdmUsers(search);
   else if(admTab==='annonces') renderAdmAnnonces(search);
+  else if(admTab==='reports') renderAdmReports(search);
   else renderAdmCollection(search);
 }
 
@@ -2848,6 +3075,68 @@ function renderAdmAnnonces(search=''){
       await remove(ref(db,`spk3/annonces/${btn.dataset.delAnnonce}`));
       admAnnonces=admAnnonces.filter(a=>a.id!==btn.dataset.delAnnonce);
       toast('Annonce supprimée','ok');
+      renderAdmTab($('adm-search').value.trim().toLowerCase());
+    }));
+}
+
+const REPORT_TYPE_LABEL={user:'👤 Utilisateur',message:'💬 Message'};
+
+function renderAdmReports(search=''){
+  const filtered=admReports.filter(r=>
+    !search
+    || (r.targetUid||'').toLowerCase().includes(search)
+    || (r.reportedBy||'').toLowerCase().includes(search)
+    || (r.reason||'').toLowerCase().includes(search));
+  if(!filtered.length){$('adm-list').innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:32px 0">Aucun signalement</div>`;return;}
+  $('adm-list').innerHTML=filtered.map(r=>`
+    <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:14px;background:var(--card);box-shadow:var(--shadow);${r.status==='resolved'?'opacity:.55':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:.78rem;font-weight:700;color:var(--accent)">${REPORT_TYPE_LABEL[r.type]||r.type}</div>
+        <div style="font-size:.7rem;color:var(--text3)">${timeAgo(r.at)}</div>
+      </div>
+      <div style="font-size:.85rem;color:var(--text)">
+        Cible : <span data-goto-user="${esc(r.type==='message'?(r.fromUid||r.targetUid):r.targetUid)}" style="font-weight:700;cursor:pointer;text-decoration:underline">@${esc(r.type==='message'?(r.fromUid||r.targetUid):r.targetUid)}</span>
+        <br/>Signalé par <span data-goto-user="${esc(r.reportedBy)}" style="font-weight:600;cursor:pointer;text-decoration:underline">@${esc(r.reportedBy)}</span>
+      </div>
+      <div style="font-size:.8rem;color:var(--text2)">Motif : <strong>${esc(r.reason||'')}</strong></div>
+      ${r.type==='message'&&r.text?`<div style="font-size:.82rem;color:var(--text);background:var(--bg);border-radius:10px;padding:8px 10px;font-style:italic">"${esc(r.text)}"</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:4px">
+        ${r.status!=='resolved'?`<button data-resolve-report="${r.id}" style="flex:1;padding:8px;border-radius:10px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer">Marquer traité</button>`:`<div style="flex:1;text-align:center;font-size:.78rem;color:var(--green);font-weight:600;padding:8px">✓ Traité</div>`}
+        ${r.type==='message'&&r.cid&&r.msgId?`<button data-del-reported-msg="${r.id}" data-cid="${esc(r.cid)}" data-msgid="${esc(r.msgId)}" style="padding:8px 12px;border-radius:10px;border:none;background:rgba(255,80,80,.12);color:var(--red);font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer">Supprimer le message</button>`:''}
+        <button data-del-report="${r.id}" title="Supprimer le signalement" style="width:34px;height:34px;border-radius:50%;border:none;background:var(--bg);color:var(--text3);cursor:pointer;font-size:1rem;flex-shrink:0">✕</button>
+      </div>
+    </div>`).join('');
+
+  $('adm-list').querySelectorAll('[data-goto-user]').forEach(el=>
+    el.addEventListener('click',()=>showProfile(el.dataset.gotoUser)));
+
+  $('adm-list').querySelectorAll('[data-resolve-report]').forEach(btn=>
+    btn.addEventListener('click', async()=>{
+      const id=btn.dataset.resolveReport;
+      await update(ref(db,`spk3/reports/${id}`),{status:'resolved'});
+      const r=admReports.find(x=>x.id===id);
+      if(r) r.status='resolved';
+      toast('Signalement marqué comme traité','ok');
+      renderAdmTab($('adm-search').value.trim().toLowerCase());
+    }));
+
+  $('adm-list').querySelectorAll('[data-del-reported-msg]').forEach(btn=>
+    btn.addEventListener('click', async()=>{
+      if(!confirm('Supprimer ce message du chat ?')) return;
+      await remove(ref(db,`spk3/msgs/${btn.dataset.cid}/${btn.dataset.msgid}`));
+      await update(ref(db,`spk3/reports/${btn.dataset.delReportedMsg}`),{status:'resolved'});
+      const r=admReports.find(x=>x.id===btn.dataset.delReportedMsg);
+      if(r) r.status='resolved';
+      toast('Message supprimé','ok');
+      renderAdmTab($('adm-search').value.trim().toLowerCase());
+    }));
+
+  $('adm-list').querySelectorAll('[data-del-report]').forEach(btn=>
+    btn.addEventListener('click', async()=>{
+      if(!confirm('Supprimer ce signalement ?')) return;
+      await remove(ref(db,`spk3/reports/${btn.dataset.delReport}`));
+      admReports=admReports.filter(r=>r.id!==btn.dataset.delReport);
+      toast('Signalement supprimé','ok');
       renderAdmTab($('adm-search').value.trim().toLowerCase());
     }));
 }
