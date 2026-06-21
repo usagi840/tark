@@ -3221,6 +3221,101 @@ async function renameUserHandle(oldId, newId){
   await Promise.all(ops);
 }
 
+// ── ÉDITER UN UTILISATEUR (admin) ───────────────────────────
+function openEditUserPage(userId){
+  const u=admUsers.find(x=>x.id===userId);
+  if(!u){ toast('Utilisateur introuvable','err'); return; }
+  const isAdminAccount=userId===ADMIN_ID;
+
+  const page=document.createElement('div');
+  page.id='edit-user-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <img src="${esc(u.avatar||DEFAV)}" style="width:34px;height:34px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
+      <div style="min-width:0">
+        <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Éditer @${esc(u.name)}</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Pseudo</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Pseudo (@)</label>
+          <input class="inp" id="eu-name" value="${esc(u.name)}" maxlength="20" ${isAdminAccount?'disabled':''}/>
+        </div>
+        ${isAdminAccount?`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Le compte admin ne peut pas être renommé.</div>`:`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Renommer met à jour automatiquement ses posts, messages, annonces et abonnements.</div>`}
+        <div id="eu-name-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Mot de passe</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Nouveau mot de passe</label>
+          <input class="inp" type="password" id="eu-pwd" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password"/>
+        </div>
+        <div id="eu-pwd-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-save" class="btn-main" style="width:100%">Enregistrer</button>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#eu-back').addEventListener('click',()=>page.remove());
+
+  page.querySelector('#eu-save').addEventListener('click', async()=>{
+    const nameErrEl=page.querySelector('#eu-name-err');
+    const pwdErrEl=page.querySelector('#eu-pwd-err');
+    nameErrEl.textContent='';pwdErrEl.textContent='';
+
+    const newName=isAdminAccount?userId:page.querySelector('#eu-name').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+    const newPwd=page.querySelector('#eu-pwd').value;
+
+    if(!isAdminAccount && !newName){ nameErrEl.textContent='Pseudo invalide'; return; }
+    if(newPwd && newPwd.length<4){ pwdErrEl.textContent='Mot de passe trop court (4 min)'; return; }
+
+    const renaming=!isAdminAccount && newName!==userId;
+    if(renaming){
+      const existSnap=await get(ref(db,`spk3/users/${newName}`));
+      if(existSnap.exists()){ nameErrEl.textContent=`@${newName} est déjà pris`; return; }
+    }
+    if(renaming){
+      const ok=await confirmCustom(`Renommer @${userId} en @${newName} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false});
+      if(!ok) return;
+    }
+
+    const btn=page.querySelector('#eu-save');
+    btn.disabled=true;btn.textContent='Enregistrement...';
+    try{
+      let finalId=userId;
+      if(renaming){
+        await renameUserHandle(userId,newName);
+        finalId=newName;
+        if(u){ u.id=newName; u.name=newName; u.fullname=newName; }
+        if(userId===myId){
+          myId=newName; myData.name=newName; myData.fullname=newName; saveS();
+          if($('shandle'))$('shandle').textContent='@'+myId;
+        }
+      }
+      if(newPwd){
+        const hashed=btoa(unescape(encodeURIComponent(newPwd)));
+        await update(ref(db,`spk3/users/${finalId}`),{pwd:hashed});
+        if(u) u.pwd=hashed;
+        if(finalId===myId) myData.pwd=hashed;
+      }
+      page.remove();
+      toast(renaming?`@${userId} renommé en @${finalId}`:'Modifications enregistrées','ok');
+      await fetchAdminData();
+    }catch(err){
+      toast('Erreur : '+(err?.message||err),'err');
+      btn.disabled=false;btn.textContent='Enregistrer';
+    }
+  });
+}
+
 function renderAdmUsers(search=''){
   const filtered=admUsers.filter(u=>
     !search||(u.name||'').toLowerCase().includes(search)||((u.fullname||'').toLowerCase()).includes(search));
@@ -3248,35 +3343,9 @@ function renderAdmUsers(search=''){
     }));
 
   $('adm-list').querySelectorAll('[data-rename]').forEach(btn=>
-    btn.addEventListener('click',async e=>{
+    btn.addEventListener('click',e=>{
       e.stopPropagation();
-      const oldId=btn.dataset.rename;
-      if(oldId===ADMIN_ID){ toast("Tu ne peux pas renommer le compte admin (cela bloquerait l'accès au panneau)",'err'); return; }
-      const u=admUsers.find(u=>u.id===oldId);
-      const current=u?.name||oldId;
-      const input=prompt(`Nouveau pseudo (@) pour @${oldId} :`, current);
-      if(input===null) return;
-      const newId=input.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
-      if(!newId){ toast('Pseudo invalide','err'); return; }
-      if(newId===oldId) return;
-      // Vérifier que le nouveau pseudo n'est pas déjà pris
-      const existSnap=await get(ref(db,`spk3/users/${newId}`));
-      if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
-      if(!(await confirmCustom(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false}))) return;
-      toast('Renommage en cours...');
-      try{
-        await renameUserHandle(oldId,newId);
-      }catch(err){
-        toast('Erreur : '+(err?.message||err),'err');
-        return;
-      }
-      if(u){ u.id=newId; u.name=newId; u.fullname=newId; }
-      if(oldId===myId){
-        myId=newId; myData.name=newId; myData.fullname=newId; saveS();
-        if($('shandle'))$('shandle').textContent='@'+myId;
-      }
-      toast(`@${oldId} renommé en @${newId}`,'ok');
-      await fetchAdminData();
+      openEditUserPage(btn.dataset.rename);
     }));
 
   $('adm-list').querySelectorAll('[data-del-user]').forEach(btn=>
