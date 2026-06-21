@@ -747,6 +747,13 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
+  // Redirige automatiquement vers la langue sauvegardée sur le compte
+  // (ce fichier correspond à la langue 'en' par défaut)
+  const THIS_PAGE_LANG='en';
+  if(myData.lang && myData.lang!==THIS_PAGE_LANG){
+    const target=LANGS.find(l=>l.code===myData.lang);
+    if(target){ window.location.href=target.file; return; }
+  }
   $('auth-screen').classList.remove('visible');
   $('auth-screen').classList.add('hidden');
   $('app').style.display='flex';
@@ -774,96 +781,151 @@ function doLogout(){
   switchTab('login');
 }
 
-// ── PARAMÈTRES (langue / déconnexion / suppression / mdp) ──
+// ── PARAMÈTRES (page plein écran) ───────────────────────────
 const LANGS=[
-  {code:'fr',label:'🇫🇷 Français',file:'fr.html'},
-  {code:'en',label:'🇬🇧 English',file:'index.html'},
+  {code:'fr',label:'Français',flag:'🇫🇷',file:'fr.html'},
+  {code:'en',label:'English',flag:'🇬🇧',file:'index.html'},
 ];
-function closeSettingsMenu(){ document.getElementById('settings-menu')?.remove(); }
 
-function openSettingsMenu(){
-  closeSettingsMenu();
-  const overlay=document.createElement('div');
-  overlay.id='settings-menu';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
-  const langRows=LANGS.map(l=>`<button data-lang="${l.file}" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${l.label}</button>`).join('<div style="height:1px;background:var(--border);margin:0 16px"></div>');
-  overlay.innerHTML=`
-    <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto">
-      <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
-      <div style="padding:6px 16px 4px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2)">Langue</div>
-      ${langRows}
-      <div style="height:8px"></div>
-      <div style="height:1px;background:var(--border);margin:0 16px"></div>
-      <button data-act="pwd" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🔒 Changer le mot de passe</button>
-      <div style="height:1px;background:var(--border);margin:0 16px"></div>
-      <button data-act="logout" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚪 Se déconnecter</button>
-      <div style="height:1px;background:var(--border);margin:0 16px"></div>
-      <button data-act="delete" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--red);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🗑️ Supprimer mon compte</button>
-      <div style="height:1px;background:var(--border);margin:0 16px"></div>
-      <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+function settingsRowHTML({icon,label,sub,id,danger,value}){
+  return `
+    <button id="${id}" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:var(--card);cursor:pointer;font-family:'Outfit',sans-serif">
+      <div style="width:36px;height:36px;border-radius:10px;background:${danger?'var(--accentbg)':'var(--bg2)'};display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.92rem;font-weight:600;color:${danger?'var(--red)':'var(--text)'}">${label}</div>
+        ${sub?`<div style="font-size:.76rem;color:var(--text3);margin-top:1px">${sub}</div>`:''}
+      </div>
+      ${value?`<div style="font-size:.82rem;color:var(--text2);flex-shrink:0">${value}</div>`:''}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.2" style="flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+}
+
+function openSettingsPage(){
+  const page=document.createElement('div');
+  page.id='settings-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+
+  const currentLang=LANGS.find(l=>l.code===(myData.lang||'fr'))||LANGS[0];
+
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="settings-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Paramètres</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Préférences</div>
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        ${settingsRowHTML({icon:currentLang.flag,label:'Langue',sub:'Choisis la langue de l’application',id:'set-lang',value:currentLang.label})}
+      </div>
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Compte</div>
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        ${settingsRowHTML({icon:'🔒',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
+        ${settingsRowHTML({icon:'🚪',label:'Se déconnecter',id:'set-logout'})}
+      </div>
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Zone dangereuse</div>
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        ${settingsRowHTML({icon:'🗑️',label:'Supprimer mon compte',sub:'Action définitive et irréversible',id:'set-delete',danger:true})}
+      </div>
+
     </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) closeSettingsMenu(); });
-  overlay.querySelector('[data-act="cancel"]').addEventListener('click', closeSettingsMenu);
-  overlay.querySelectorAll('[data-lang]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ window.location.href=btn.dataset.lang; });
+  document.body.appendChild(page);
+  page.querySelector('#settings-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#set-lang').addEventListener('click',openLangPage);
+  page.querySelector('#set-pwd').addEventListener('click',openChangePasswordPage);
+  page.querySelector('#set-logout').addEventListener('click',async()=>{
+    const ok=await confirmCustom('Se déconnecter ?',{okLabel:'Se déconnecter',danger:false});
+    if(ok){ page.remove(); doLogout(); }
   });
-  overlay.querySelector('[data-act="logout"]').addEventListener('click', async ()=>{
-    closeSettingsMenu();
-    const ok=await confirmCustom('Se déconnecter ?', {okLabel:'Se déconnecter', danger:false});
-    if(ok) doLogout();
-  });
-  overlay.querySelector('[data-act="delete"]').addEventListener('click', ()=>{
-    closeSettingsMenu();
-    openDeleteAccountModal();
-  });
-  overlay.querySelector('[data-act="pwd"]').addEventListener('click', ()=>{
-    closeSettingsMenu();
-    openChangePasswordModal();
+  page.querySelector('#set-delete').addEventListener('click',openDeleteAccountPage);
+}
+$('btn-settings')?.addEventListener('click', openSettingsPage);
+
+// ── LANGUE ───────────────────────────────────────────────────
+function openLangPage(){
+  const page=document.createElement('div');
+  page.id='lang-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  const currentCode=myData.lang||'fr';
+
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="lang-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Langue</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow)">
+        ${LANGS.map((l,i)=>`
+          ${i>0?'<div style="height:1px;background:var(--border);margin:0 16px"></div>':''}
+          <button data-lang-code="${l.code}" data-lang-file="${l.file}" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;padding:15px 16px;border:none;background:var(--card);cursor:pointer;font-family:'Outfit',sans-serif">
+            <div style="font-size:1.3rem">${l.flag}</div>
+            <div style="flex:1;font-size:.92rem;font-weight:600;color:var(--text)">${l.label}</div>
+            ${l.code===currentCode?`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+          </button>`).join('')}
+      </div>
+      <div style="font-size:.78rem;color:var(--text3);margin:12px 4px 0;line-height:1.5">Ta langue est sauvegardée sur ton compte et sera appliquée automatiquement à chaque connexion.</div>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#lang-back').addEventListener('click',()=>page.remove());
+  page.querySelectorAll('[data-lang-code]').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const code=btn.dataset.langCode;
+      const file=btn.dataset.langFile;
+      if(code===currentCode) return;
+      btn.style.opacity='.6';
+      try{
+        await update(ref(db,`spk3/users/${myId}`),{lang:code});
+        myData.lang=code;
+      }catch(e){}
+      window.location.href=file;
+    });
   });
 }
-$('btn-settings')?.addEventListener('click', openSettingsMenu);
 
-// ── CHANGER LE MOT DE PASSE ─────────────────────────────────
-function openChangePasswordModal(){
-  const old=document.getElementById('pwd-modal');
-  if(old) old.remove();
-  const overlay=document.createElement('div');
-  overlay.id='pwd-modal';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML=`
-    <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
-      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text);margin-bottom:14px">Changer le mot de passe</div>
-      <div class="field"><label>Mot de passe actuel</label><input class="inp" type="password" id="pwd-old" placeholder="••••••" autocomplete="current-password"/></div>
-      <div class="field"><label>Nouveau mot de passe</label><input class="inp" type="password" id="pwd-new" placeholder="••••••" autocomplete="new-password"/></div>
-      <div class="field"><label>Confirme le nouveau mot de passe</label><input class="inp" type="password" id="pwd-new2" placeholder="••••••" autocomplete="new-password"/></div>
-      <div class="auth-err" id="pwd-err" style="margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px">
-        <button id="pwd-cancel" style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">Annuler</button>
-        <button id="pwd-confirm" style="flex:1;padding:11px;border-radius:11px;border:none;background:var(--accent);color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Valider</button>
+// ── CHANGER LE MOT DE PASSE ──────────────────────────────────
+function openChangePasswordPage(){
+  const page=document.createElement('div');
+  page.id='pwd-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="pwd-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Changer le mot de passe</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px">
+        <div class="field"><label>Mot de passe actuel</label><input class="inp" type="password" id="pwd-old" placeholder="••••••" autocomplete="current-password"/></div>
+        <div class="field"><label>Nouveau mot de passe</label><input class="inp" type="password" id="pwd-new" placeholder="••••••" autocomplete="new-password"/></div>
+        <div class="field" style="margin-bottom:4px"><label>Confirme le nouveau mot de passe</label><input class="inp" type="password" id="pwd-new2" placeholder="••••••" autocomplete="new-password"/></div>
+        <div class="auth-err" id="pwd-err"></div>
       </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="pwd-confirm" class="btn-main" style="width:100%">Valider</button>
     </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
-  overlay.querySelector('#pwd-cancel').addEventListener('click', ()=>overlay.remove());
-  overlay.querySelector('#pwd-confirm').addEventListener('click', async ()=>{
-    const errEl=overlay.querySelector('#pwd-err');
+  document.body.appendChild(page);
+  page.querySelector('#pwd-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#pwd-confirm').addEventListener('click', async()=>{
+    const errEl=page.querySelector('#pwd-err');
     errEl.textContent='';
-    const oldPwd=overlay.querySelector('#pwd-old').value;
-    const newPwd=overlay.querySelector('#pwd-new').value;
-    const newPwd2=overlay.querySelector('#pwd-new2').value;
+    const oldPwd=page.querySelector('#pwd-old').value;
+    const newPwd=page.querySelector('#pwd-new').value;
+    const newPwd2=page.querySelector('#pwd-new2').value;
     if(!oldPwd||!newPwd||!newPwd2){errEl.textContent='Remplis tous les champs';return;}
     if(myData.pwd!==btoa(unescape(encodeURIComponent(oldPwd)))){errEl.textContent='Mot de passe actuel incorrect';return;}
     if(newPwd.length<4){errEl.textContent='Nouveau mot de passe trop court (4 min)';return;}
     if(newPwd!==newPwd2){errEl.textContent='Les nouveaux mots de passe ne correspondent pas';return;}
-    const btn=overlay.querySelector('#pwd-confirm');
+    const btn=page.querySelector('#pwd-confirm');
     btn.disabled=true;btn.textContent='...';
     try{
       const hashed=btoa(unescape(encodeURIComponent(newPwd)));
       await update(ref(db,`spk3/users/${myId}`),{pwd:hashed});
       myData.pwd=hashed;
-      overlay.remove();
       toast('Mot de passe mis à jour !','ok');
+      page.remove();
     }catch(e){
       errEl.textContent='Erreur réseau, réessaie';
       btn.disabled=false;btn.textContent='Valider';
@@ -871,47 +933,54 @@ function openChangePasswordModal(){
   });
 }
 
-// ── SUPPRIMER MON COMPTE ────────────────────────────────────
-function openDeleteAccountModal(){
-  const old=document.getElementById('delacc-modal');
-  if(old) old.remove();
-  const overlay=document.createElement('div');
-  overlay.id='delacc-modal';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML=`
-    <div style="background:var(--card);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:var(--shadow-lg)">
-      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--red);margin-bottom:8px">Supprimer mon compte</div>
-      <div style="font-size:.86rem;color:var(--text2);line-height:1.5;margin-bottom:14px">Cette action est irréversible. Entre ton mot de passe pour confirmer.</div>
-      <div class="field"><label>Mot de passe</label><input class="inp" type="password" id="delacc-pwd" placeholder="••••••" autocomplete="current-password"/></div>
-      <div class="auth-err" id="delacc-err" style="margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px">
-        <button id="delacc-cancel" style="flex:1;padding:11px;border-radius:11px;border:1.5px solid var(--border);background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">Annuler</button>
-        <button id="delacc-confirm" style="flex:1;padding:11px;border-radius:11px;border:none;background:var(--red);color:white;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Supprimer</button>
+// ── SUPPRIMER MON COMPTE ─────────────────────────────────────
+function openDeleteAccountPage(){
+  const page=document.createElement('div');
+  page.id='delacc-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="delacc-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--red)">Supprimer mon compte</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+      <div style="text-align:center;margin-bottom:22px">
+        <div style="font-size:2.2rem;margin-bottom:10px">⚠️</div>
+        <div style="font-size:.88rem;color:var(--text2);line-height:1.6;max-width:320px;margin:0 auto">Cette action est <strong style="color:var(--text)">définitive et irréversible</strong>. Ton profil, tes annonces et tes messages seront supprimés. Entre ton mot de passe pour confirmer.</div>
       </div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px">
+        <div class="field" style="margin-bottom:4px"><label>Mot de passe</label><input class="inp" type="password" id="delacc-pwd" placeholder="••••••" autocomplete="current-password"/></div>
+        <div class="auth-err" id="delacc-err"></div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="delacc-confirm" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--red);color:white;font-family:'Outfit',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer">Supprimer définitivement</button>
     </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
-  overlay.querySelector('#delacc-cancel').addEventListener('click', ()=>overlay.remove());
-  overlay.querySelector('#delacc-confirm').addEventListener('click', async ()=>{
-    const errEl=overlay.querySelector('#delacc-err');
+  document.body.appendChild(page);
+  page.querySelector('#delacc-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#delacc-confirm').addEventListener('click', async()=>{
+    const errEl=page.querySelector('#delacc-err');
     errEl.textContent='';
-    const pwd=overlay.querySelector('#delacc-pwd').value;
+    const pwd=page.querySelector('#delacc-pwd').value;
     if(!pwd){errEl.textContent='Entre ton mot de passe';return;}
     if(myData.pwd!==btoa(unescape(encodeURIComponent(pwd)))){errEl.textContent='Mot de passe incorrect';return;}
     if(myId===ADMIN_ID){errEl.textContent='Le compte admin ne peut pas être supprimé';return;}
-    const btn=overlay.querySelector('#delacc-confirm');
+    const ok=await confirmCustom('Es-tu vraiment sûr de vouloir supprimer ton compte ? Cette action ne peut pas être annulée.',{okLabel:'Oui, supprimer'});
+    if(!ok) return;
+    const btn=page.querySelector('#delacc-confirm');
     btn.disabled=true;btn.textContent='Suppression...';
     try{
       await remove(ref(db,`spk3/users/${myId}`));
-      overlay.remove();
       toast('Compte supprimé','ok');
+      page.remove();
       doLogout();
     }catch(e){
       errEl.textContent='Erreur réseau, réessaie';
-      btn.disabled=false;btn.textContent='Supprimer';
+      btn.disabled=false;btn.textContent='Supprimer définitivement';
     }
   });
 }
+
 
 // ── NAV ────────────────────────────────────────────────────
 function showPage(p){
@@ -3007,7 +3076,7 @@ async function loadAdmin(){
   if(myId!==ADMIN_ID) return;
   showPage('admin');
   $('page-admin').innerHTML=`
-    <div style="width:100%;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px">
+    <div style="width:100%;padding:14px 16px 100px;display:flex;flex-direction:column;gap:14px">
       <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text)">Panneau Admin</div>
 
       <!-- Recherche -->
