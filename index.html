@@ -1636,41 +1636,53 @@ async function showProfile(uid, fromMessages=false){
     const btnMoreP=$('btn-more-profile');
     if(btnMoreP){
       btnMoreP.addEventListener('click', async()=>{
-        const blockSnap=await get(ref(db,`spk3/blocks/${myId}/${uid}`));
-        const isBlocked=blockSnap.exists();
+        let isBlocked=(await get(ref(db,`spk3/blocks/${myId}/${uid}`))).exists();
 
         const old=document.getElementById('profile-action-menu');
         if(old) old.remove();
         const overlay=document.createElement('div');
         overlay.id='profile-action-menu';
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
-        overlay.innerHTML=`
-          <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
-            <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
-            <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
-            <div style="height:1px;background:var(--border);margin:0 16px"></div>
-            <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
-            <div style="height:1px;background:var(--border);margin:0 16px"></div>
-            <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
-          </div>`;
+
+        const renderMenu=()=>{
+          overlay.innerHTML=`
+            <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
+              <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
+              <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
+              <div style="height:1px;background:var(--border);margin:0 16px"></div>
+              <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
+              <div style="height:1px;background:var(--border);margin:0 16px"></div>
+              <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
+            </div>`;
+          overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
+          overlay.querySelector('[data-act="block"]').addEventListener('click', async btnEvt=>{
+            const blockBtn=btnEvt.currentTarget;
+            blockBtn.disabled=true;
+            try{
+              if(isBlocked){
+                await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
+                toast(`@${uid} débloqué`,'ok');
+              }else{
+                if(!confirm(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`)){ blockBtn.disabled=false; return; }
+                await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
+                toast(`@${uid} bloqué`,'ok');
+              }
+              isBlocked=!isBlocked;
+              renderMenu(); // ré-affiche le menu avec le label à jour (Bloquer ↔ Débloquer)
+            }catch(err){
+              toast('Erreur, réessaie','err');
+              blockBtn.disabled=false;
+            }
+          });
+          overlay.querySelector('[data-act="report"]').addEventListener('click', ()=>{
+            overlay.remove();
+            openReportModal('user', uid);
+          });
+        };
+        renderMenu();
+
         document.body.appendChild(overlay);
         overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
-        overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
-        overlay.querySelector('[data-act="block"]').addEventListener('click', async()=>{
-          overlay.remove();
-          if(isBlocked){
-            await remove(ref(db,`spk3/blocks/${myId}/${uid}`));
-            toast(`@${uid} débloqué`,'ok');
-          }else{
-            if(!confirm(`Bloquer @${uid} ? Cette personne ne pourra plus t'envoyer de messages.`)) return;
-            await set(ref(db,`spk3/blocks/${myId}/${uid}`),{at:Date.now()});
-            toast(`@${uid} bloqué`,'ok');
-          }
-        });
-        overlay.querySelector('[data-act="report"]').addEventListener('click', ()=>{
-          overlay.remove();
-          openReportModal('user', uid);
-        });
       });
     }
   }
