@@ -486,8 +486,8 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="brand" id="logo-home">Tark</div>
     <div class="topbar-r">
-      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres" style="padding:0">
+        <img src="logo/parametre.png" alt="Paramètres" style="width:22px;height:22px;object-fit:contain"/>
       </button>
       <img class="top-av" id="top-av" src="" alt="Mon profil"/>
     </div>
@@ -824,10 +824,7 @@ function openSettingsPage(){
         ${settingsRowHTML({icon:'🔒',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
         <div style="height:1px;background:var(--border);margin:0 16px"></div>
         ${settingsRowHTML({icon:'🚪',label:'Se déconnecter',id:'set-logout'})}
-      </div>
-
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Zone dangereuse</div>
-      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
         ${settingsRowHTML({icon:'🗑️',label:'Supprimer mon compte',sub:'Action définitive et irréversible',id:'set-delete',danger:true})}
       </div>
 
@@ -1892,10 +1889,7 @@ async function showProfile(uid, fromMessages=false){
               <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
               <div style="height:1px;background:var(--border);margin:0 16px"></div>
               <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
-              <div style="height:1px;background:var(--border);margin:0 16px"></div>
-              <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
             </div>`;
-          overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
           overlay.querySelector('[data-act="block"]').addEventListener('click', async btnEvt=>{
             const blockBtn=btnEvt.currentTarget;
             blockBtn.disabled=true;
