@@ -321,11 +321,12 @@ textarea.inp{resize:vertical;min-height:72px}
   background:rgba(255,255,255,.95);backdrop-filter:blur(16px);
   border-top:1px solid var(--border);z-index:100;justify-content:space-around;align-items:center}
 
-.bnav-btn{display:flex;flex-direction:column;align-items:center;padding:8px 20px;
-  cursor:pointer;color:var(--text3);border:none;background:none;font-size:.62rem;
-  gap:3px;transition:color .15s}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;padding:8px 8px;
+  cursor:pointer;color:var(--text3);border:none;background:none;font-size:.6rem;
+  gap:3px;transition:color .15s;flex:1;min-width:0}
 .bnav-btn.active,.bnav-btn:hover{color:var(--accent)}
-.bnav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
+.bnav-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2}
+.bnav-btn img{width:21px;height:21px;object-fit:contain}
 
 /* ════════════════════════════
    EMPTY / SKELETON
@@ -486,9 +487,6 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="brand" id="logo-home">Tark</div>
     <div class="topbar-r">
-      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres" style="padding:0">
-        <img src="logo/parametre.png" alt="Paramètres" style="width:22px;height:22px;object-fit:contain"/>
-      </button>
       <img class="top-av" id="top-av" src="" alt="Mon profil"/>
     </div>
   </div>
@@ -504,8 +502,14 @@ input[type=file]{display:none}
   <!-- QUÊTES -->
   <div class="page" id="page-quetes"></div>
 
+  <!-- CLASSEMENT -->
+  <div class="page" id="page-classement"></div>
+
   <!-- PROFIL -->
   <div class="page" id="page-profile"></div>
+
+  <!-- PARAMÈTRES -->
+  <div class="page" id="page-settings"></div>
 
   <!-- ADMIN -->
   <div class="page" id="page-admin"></div>
@@ -525,9 +529,17 @@ input[type=file]{display:none}
       <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
       Quêtes
     </button>
+    <button class="bnav-btn" id="bnav-classement">
+      <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H4a2 2 0 002 4M17 5h3a2 2 0 01-2 4"/></svg>
+      Classement
+    </button>
     <button class="bnav-btn" id="bnav-profile">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profil
+    </button>
+    <button class="bnav-btn" id="bnav-settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Réglages
     </button>
     <button class="bnav-btn" id="bnav-admin" style="display:none">
       <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/></svg>
@@ -800,19 +812,16 @@ function settingsRowHTML({icon,label,sub,id,danger,value}){
     </button>`;
 }
 
-function openSettingsPage(){
-  const page=document.createElement('div');
-  page.id='settings-page';
-  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+function showSettings(){
+  showPage('settings');
+  const page=$('page-settings');
+  if(!page) return;
 
   const currentLang=LANGS.find(l=>l.code===(myData.lang||'fr'))||LANGS[0];
 
   page.innerHTML=`
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
-      <button id="settings-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
-      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Paramètres</div>
-    </div>
-    <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
+    <div style="max-width:620px;margin:0 auto;width:100%;padding:16px 16px 100px">
+      <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text);margin:0 4px 18px">Paramètres</div>
 
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Préférences</div>
       <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
@@ -829,17 +838,14 @@ function openSettingsPage(){
       </div>
 
     </div>`;
-  document.body.appendChild(page);
-  page.querySelector('#settings-back').addEventListener('click',()=>page.remove());
   page.querySelector('#set-lang').addEventListener('click',openLangPage);
   page.querySelector('#set-pwd').addEventListener('click',openChangePasswordPage);
   page.querySelector('#set-logout').addEventListener('click',async()=>{
     const ok=await confirmCustom('Se déconnecter ?',{okLabel:'Se déconnecter',danger:false});
-    if(ok){ page.remove(); doLogout(); }
+    if(ok) doLogout();
   });
   page.querySelector('#set-delete').addEventListener('click',openDeleteAccountPage);
 }
-$('btn-settings')?.addEventListener('click', openSettingsPage);
 
 // ── LANGUE ───────────────────────────────────────────────────
 function openLangPage(){
@@ -985,14 +991,16 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.bnav-btn').forEach(el=>el.classList.remove('active'));
   $('page-'+p)?.classList.add('active');
-  const map={feed:'bnav-feed',messages:'bnav-post',quetes:'bnav-quetes',profile:'bnav-profile',annonce:'bnav-feed',admin:'bnav-admin'};
+  const map={feed:'bnav-feed',messages:'bnav-post',quetes:'bnav-quetes',classement:'bnav-classement',profile:'bnav-profile',settings:'bnav-settings',annonce:'bnav-feed',admin:'bnav-admin'};
   if(map[p]) $(map[p])?.classList.add('active');
 }
 $('logo-home').addEventListener('click',showRecherche);
 $('bnav-feed').addEventListener('click',showRecherche);
 $('bnav-post').addEventListener('click', showMessages);
 $('bnav-quetes').addEventListener('click', showQuetes);
+$('bnav-classement').addEventListener('click', showClassement);
 $('bnav-profile').addEventListener('click',()=>showProfile(myId));
+$('bnav-settings').addEventListener('click', showSettings);
 $('bnav-admin')?.addEventListener('click',()=>{ if(myId===ADMIN_ID) loadAdmin(); });
 $('top-av').addEventListener('click',()=>showProfile(myId));
 
@@ -1021,6 +1029,84 @@ function showQuetes(){
       </div>
     </div>`;
   loadQuetes();
+}
+
+// ── CLASSEMENT MONDIAL DE TROPHÉES ──────────────────────────
+function showClassement(){
+  showPage('classement');
+  const page=$('page-classement');
+  if(!page) return;
+
+  if(!myData.bsVerified){
+    page.innerHTML=`
+      <div style="max-width:620px;margin:0 auto;width:100%;padding:60px 24px 100px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+        <div style="font-size:2.6rem">🏆</div>
+        <div style="font-family:'Fraunces',serif;font-size:1.25rem;font-weight:600;color:var(--text)">Débloque le classement</div>
+        <div style="font-size:.86rem;color:var(--text2);max-width:320px;line-height:1.5">Vérifie ton compte Brawl Stars pour apparaître dans le classement mondial de trophées et voir où tu te situes face aux autres joueurs</div>
+        <button id="classement-verify-btn" class="btn-main" style="width:auto;padding:13px 26px;margin-top:6px">Vérifier mon compte</button>
+      </div>`;
+    $('classement-verify-btn').addEventListener('click', openVerifyModal);
+    return;
+  }
+
+  page.innerHTML=`
+    <div style="max-width:620px;margin:0 auto;width:100%;padding:16px 16px 100px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text)">Classement mondial</div>
+      <div style="font-size:.82rem;color:var(--text2);margin-top:-8px">Classement des joueurs vérifiés, par trophées</div>
+      <div id="classement-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Chargement…</div>
+      </div>
+    </div>`;
+  loadClassement();
+}
+
+async function loadClassement(){
+  const list=$('classement-list');
+  if(!list) return;
+  try{
+    const usersSnap=await get(ref(db,'spk3/users'));
+    const ranked=[];
+    if(usersSnap.exists()){
+      usersSnap.forEach(c=>{
+        const u=c.val();
+        if(u && !u.redirectTo && u.bsVerified){
+          const trophies=parseInt(u.statTrophees,10);
+          if(!isNaN(trophies)) ranked.push({id:c.key,avatar:u.avatar,name:u.fullname||u.name||c.key,trophies,ranked:translateRank(u.statRanked)});
+        }
+      });
+    }
+    ranked.sort((a,b)=>b.trophies-a.trophies);
+
+    if(!ranked.length){
+      list.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Aucun joueur vérifié pour le moment</div>`;
+      return;
+    }
+
+    const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':null;
+    list.innerHTML=ranked.map((u,i)=>{
+      const isMe=u.id===myId;
+      const m=medal(i);
+      return `
+        <div data-open-user="${esc(u.id)}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:${isMe?'var(--accentbg)':'var(--card)'};box-shadow:var(--shadow);cursor:pointer;${isMe?'border:1.5px solid var(--accent)':''}">
+          <div style="width:28px;text-align:center;font-size:${m?'1.15rem':'.92rem'};font-weight:700;color:${m?'inherit':'var(--text3)'};flex-shrink:0">${m||('#'+(i+1))}</div>
+          <img src="${esc(u.avatar||DEFAV)}" style="width:42px;height:42px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.name)}${isMe?' (toi)':''}</div>
+            ${u.ranked?`<div style="font-size:.76rem;color:var(--text3)">${esc(u.ranked)}</div>`:''}
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            <span style="font-size:.95rem">🏆</span>
+            <span style="font-weight:700;font-size:.92rem;color:var(--text)">${u.trophies.toLocaleString('fr-FR')}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-open-user]').forEach(el=>
+      el.addEventListener('click',()=>showProfile(el.dataset.openUser)));
+
+  }catch(e){
+    list.innerHTML=`<div style="text-align:center;color:var(--red);font-size:.85rem;padding:24px 0">Erreur de chargement du classement</div>`;
+  }
 }
 
 const QUEST_DEFS=[
@@ -3221,6 +3307,101 @@ async function renameUserHandle(oldId, newId){
   await Promise.all(ops);
 }
 
+// ── ÉDITER UN UTILISATEUR (admin) ───────────────────────────
+function openEditUserPage(userId){
+  const u=admUsers.find(x=>x.id===userId);
+  if(!u){ toast('Utilisateur introuvable','err'); return; }
+  const isAdminAccount=userId===ADMIN_ID;
+
+  const page=document.createElement('div');
+  page.id='edit-user-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <img src="${esc(u.avatar||DEFAV)}" style="width:34px;height:34px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
+      <div style="min-width:0">
+        <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Éditer @${esc(u.name)}</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Pseudo</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Pseudo (@)</label>
+          <input class="inp" id="eu-name" value="${esc(u.name)}" maxlength="20" ${isAdminAccount?'disabled':''}/>
+        </div>
+        ${isAdminAccount?`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Le compte admin ne peut pas être renommé.</div>`:`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Renommer met à jour automatiquement ses posts, messages, annonces et abonnements.</div>`}
+        <div id="eu-name-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Mot de passe</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Nouveau mot de passe</label>
+          <input class="inp" type="password" id="eu-pwd" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password"/>
+        </div>
+        <div id="eu-pwd-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-save" class="btn-main" style="width:100%">Enregistrer</button>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#eu-back').addEventListener('click',()=>page.remove());
+
+  page.querySelector('#eu-save').addEventListener('click', async()=>{
+    const nameErrEl=page.querySelector('#eu-name-err');
+    const pwdErrEl=page.querySelector('#eu-pwd-err');
+    nameErrEl.textContent='';pwdErrEl.textContent='';
+
+    const newName=isAdminAccount?userId:page.querySelector('#eu-name').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+    const newPwd=page.querySelector('#eu-pwd').value;
+
+    if(!isAdminAccount && !newName){ nameErrEl.textContent='Pseudo invalide'; return; }
+    if(newPwd && newPwd.length<4){ pwdErrEl.textContent='Mot de passe trop court (4 min)'; return; }
+
+    const renaming=!isAdminAccount && newName!==userId;
+    if(renaming){
+      const existSnap=await get(ref(db,`spk3/users/${newName}`));
+      if(existSnap.exists()){ nameErrEl.textContent=`@${newName} est déjà pris`; return; }
+    }
+    if(renaming){
+      const ok=await confirmCustom(`Renommer @${userId} en @${newName} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false});
+      if(!ok) return;
+    }
+
+    const btn=page.querySelector('#eu-save');
+    btn.disabled=true;btn.textContent='Enregistrement...';
+    try{
+      let finalId=userId;
+      if(renaming){
+        await renameUserHandle(userId,newName);
+        finalId=newName;
+        if(u){ u.id=newName; u.name=newName; u.fullname=newName; }
+        if(userId===myId){
+          myId=newName; myData.name=newName; myData.fullname=newName; saveS();
+          if($('shandle'))$('shandle').textContent='@'+myId;
+        }
+      }
+      if(newPwd){
+        const hashed=btoa(unescape(encodeURIComponent(newPwd)));
+        await update(ref(db,`spk3/users/${finalId}`),{pwd:hashed});
+        if(u) u.pwd=hashed;
+        if(finalId===myId) myData.pwd=hashed;
+      }
+      page.remove();
+      toast(renaming?`@${userId} renommé en @${finalId}`:'Modifications enregistrées','ok');
+      await fetchAdminData();
+    }catch(err){
+      toast('Erreur : '+(err?.message||err),'err');
+      btn.disabled=false;btn.textContent='Enregistrer';
+    }
+  });
+}
+
 function renderAdmUsers(search=''){
   const filtered=admUsers.filter(u=>
     !search||(u.name||'').toLowerCase().includes(search)||((u.fullname||'').toLowerCase()).includes(search));
@@ -3248,35 +3429,9 @@ function renderAdmUsers(search=''){
     }));
 
   $('adm-list').querySelectorAll('[data-rename]').forEach(btn=>
-    btn.addEventListener('click',async e=>{
+    btn.addEventListener('click',e=>{
       e.stopPropagation();
-      const oldId=btn.dataset.rename;
-      if(oldId===ADMIN_ID){ toast("Tu ne peux pas renommer le compte admin (cela bloquerait l'accès au panneau)",'err'); return; }
-      const u=admUsers.find(u=>u.id===oldId);
-      const current=u?.name||oldId;
-      const input=prompt(`Nouveau pseudo (@) pour @${oldId} :`, current);
-      if(input===null) return;
-      const newId=input.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
-      if(!newId){ toast('Pseudo invalide','err'); return; }
-      if(newId===oldId) return;
-      // Vérifier que le nouveau pseudo n'est pas déjà pris
-      const existSnap=await get(ref(db,`spk3/users/${newId}`));
-      if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
-      if(!(await confirmCustom(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false}))) return;
-      toast('Renommage en cours...');
-      try{
-        await renameUserHandle(oldId,newId);
-      }catch(err){
-        toast('Erreur : '+(err?.message||err),'err');
-        return;
-      }
-      if(u){ u.id=newId; u.name=newId; u.fullname=newId; }
-      if(oldId===myId){
-        myId=newId; myData.name=newId; myData.fullname=newId; saveS();
-        if($('shandle'))$('shandle').textContent='@'+myId;
-      }
-      toast(`@${oldId} renommé en @${newId}`,'ok');
-      await fetchAdminData();
+      openEditUserPage(btn.dataset.rename);
     }));
 
   $('adm-list').querySelectorAll('[data-del-user]').forEach(btn=>
