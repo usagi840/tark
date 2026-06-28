@@ -752,12 +752,6 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
-  // Ce fichier est la version française
-  const THIS_PAGE_LANG='fr';
-  if(myData.lang && myData.lang!==THIS_PAGE_LANG){
-    const target=LANGS.find(l=>l.code===myData.lang);
-    if(target){ window.location.href=target.file; return; }
-  }
   $('auth-screen').classList.remove('visible');
   $('auth-screen').classList.add('hidden');
   $('app').style.display='flex';
