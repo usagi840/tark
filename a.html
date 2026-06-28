@@ -321,9 +321,9 @@ textarea.inp{resize:vertical;min-height:72px}
   background:rgba(255,255,255,.95);backdrop-filter:blur(16px);
   border-top:1px solid var(--border);z-index:100;justify-content:space-around;align-items:center}
 
-.bnav-btn{display:flex;flex-direction:column;align-items:center;padding:8px 20px;
+.bnav-btn{display:flex;flex-direction:column;align-items:center;padding:8px 10px;
   cursor:pointer;color:var(--text3);border:none;background:none;font-size:.62rem;
-  gap:3px;transition:color .15s}
+  gap:3px;transition:color .15s;flex:1}
 .bnav-btn.active,.bnav-btn:hover{color:var(--accent)}
 .bnav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
 
@@ -810,6 +810,8 @@ function showSettings(){
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Application</div>
       <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
         ${settingsRowHTML({icon:'<img src="logo/downloadapk.png" style="width:22px;height:22px;object-fit:contain"/>',label:"Télécharger l'app Android",sub:'Installe Tark sur ton téléphone (.apk)',id:'set-apk'})}
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
+        ${settingsRowHTML({icon:'<img src="logo/discord.png" style="width:22px;height:22px;object-fit:contain"/>',label:'Rejoindre le Discord',sub:'Rejoins la communauté Tark',id:'set-discord'})}
       </div>
 
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Compte</div>
@@ -823,6 +825,9 @@ function showSettings(){
     </div>`;
   page.querySelector('#set-apk').addEventListener('click',()=>{
     window.open('https://usagi840.github.io/tark/tark-v1.apk','_blank');
+  });
+  page.querySelector('#set-discord').addEventListener('click',()=>{
+    window.open('https://discord.gg/cDG8B9nuMr','_blank');
   });
   page.querySelector('#set-pwd').addEventListener('click',openChangePasswordPage);
   page.querySelector('#set-logout').addEventListener('click',async()=>{
