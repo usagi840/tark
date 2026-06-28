@@ -576,6 +576,7 @@ const db=getDatabase(initializeApp({
 },'spark_v3'));
 
 // ── STATE ──────────────────────────────────────────────────
+const ADMIN_ID = 'alex';
 let myId=null,myData=null,feedListener=null,pendingImg=null,signupAv='assets/shelly_pin.png';
 let currentChatCid=null,chatSyncTimer=null,currentChatRef=null,openConvoSeq=0;
 
@@ -3032,7 +3033,6 @@ async function showSubs(uid,tab){
 }
 
 // ── ADMIN ──────────────────────────────────────────────────
-const ADMIN_ID = 'alex';
 // Icônes exclusives qu'on peut ajouter à la collection d'un membre.
 // Les avoir dans sa collection ne les équipe pas automatiquement :
 // chacun peut ensuite les équiper depuis son sélecteur de photo de profil.
