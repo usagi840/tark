@@ -486,6 +486,9 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="brand" id="logo-home">Tark</div>
     <div class="topbar-r">
+      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
       <img class="top-av" id="top-av" src="" alt="Mon profil"/>
     </div>
   </div>
@@ -744,6 +747,13 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
+  // Redirige automatiquement vers la langue sauvegardée sur le compte
+  // (ce fichier correspond à la langue 'en' par défaut)
+  const THIS_PAGE_LANG='en';
+  if(myData.lang && myData.lang!==THIS_PAGE_LANG){
+    const target=LANGS.find(l=>l.code===myData.lang);
+    if(target){ window.location.href=target.file; return; }
+  }
   $('auth-screen').classList.remove('visible');
   $('auth-screen').classList.add('hidden');
   $('app').style.display='flex';
@@ -762,14 +772,205 @@ function bootApp(){
 }
 
 // ── LOGOUT ─────────────────────────────────────────────────
-$('btn-logout')?.addEventListener('click',()=>{
+function doLogout(){
   if(feedListener){off(ref(db,'spk3/posts'),'value',feedListener);feedListener=null;}
   myId=null;myData=null;clearS();
   $('app').style.display='none';
   $('auth-screen').classList.remove('hidden');
   $('auth-screen').classList.add('visible');
   switchTab('login');
-});
+}
+
+// ── PARAMÈTRES (page plein écran) ───────────────────────────
+const LANGS=[
+  {code:'fr',label:'Français',flag:'🇫🇷',file:'fr.html'},
+  {code:'en',label:'English',flag:'🇬🇧',file:'index.html'},
+];
+
+function settingsRowHTML({icon,label,sub,id,danger,value}){
+  return `
+    <button id="${id}" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:var(--card);cursor:pointer;font-family:'Outfit',sans-serif">
+      <div style="width:36px;height:36px;border-radius:10px;background:${danger?'var(--accentbg)':'var(--bg2)'};display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.92rem;font-weight:600;color:${danger?'var(--red)':'var(--text)'}">${label}</div>
+        ${sub?`<div style="font-size:.76rem;color:var(--text3);margin-top:1px">${sub}</div>`:''}
+      </div>
+      ${value?`<div style="font-size:.82rem;color:var(--text2);flex-shrink:0">${value}</div>`:''}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2.2" style="flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+}
+
+function openSettingsPage(){
+  const page=document.createElement('div');
+  page.id='settings-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="settings-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Paramètres</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
+
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Compte</div>
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        ${settingsRowHTML({icon:'🔒',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
+        ${settingsRowHTML({icon:'🚪',label:'Se déconnecter',id:'set-logout'})}
+        <div style="height:1px;background:var(--border);margin:0 16px"></div>
+        ${settingsRowHTML({icon:'🗑️',label:'Supprimer mon compte',sub:'Action définitive et irréversible',id:'set-delete',danger:true})}
+      </div>
+
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#settings-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#set-pwd').addEventListener('click',openChangePasswordPage);
+  page.querySelector('#set-logout').addEventListener('click',async()=>{
+    const ok=await confirmCustom('Se déconnecter ?',{okLabel:'Se déconnecter',danger:false});
+    if(ok){ page.remove(); doLogout(); }
+  });
+  page.querySelector('#set-delete').addEventListener('click',openDeleteAccountPage);
+}
+$('btn-settings')?.addEventListener('click', openSettingsPage);
+
+// ── LANGUE ───────────────────────────────────────────────────
+function openLangPage(){
+  const page=document.createElement('div');
+  page.id='lang-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  const currentCode=myData.lang||'fr';
+
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="lang-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Langue</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow)">
+        ${LANGS.map((l,i)=>`
+          ${i>0?'<div style="height:1px;background:var(--border);margin:0 16px"></div>':''}
+          <button data-lang-code="${l.code}" data-lang-file="${l.file}" style="width:100%;text-align:left;display:flex;align-items:center;gap:14px;padding:15px 16px;border:none;background:var(--card);cursor:pointer;font-family:'Outfit',sans-serif">
+            <div style="font-size:1.3rem">${l.flag}</div>
+            <div style="flex:1;font-size:.92rem;font-weight:600;color:var(--text)">${l.label}</div>
+            ${l.code===currentCode?`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+          </button>`).join('')}
+      </div>
+      <div style="font-size:.78rem;color:var(--text3);margin:12px 4px 0;line-height:1.5">Ta langue est sauvegardée sur ton compte et sera appliquée automatiquement à chaque connexion.</div>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#lang-back').addEventListener('click',()=>page.remove());
+  page.querySelectorAll('[data-lang-code]').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const code=btn.dataset.langCode;
+      const file=btn.dataset.langFile;
+      if(code===currentCode) return;
+      btn.style.opacity='.6';
+      try{
+        await update(ref(db,`spk3/users/${myId}`),{lang:code});
+        myData.lang=code;
+      }catch(e){}
+      window.location.href=file;
+    });
+  });
+}
+
+// ── CHANGER LE MOT DE PASSE ──────────────────────────────────
+function openChangePasswordPage(){
+  const page=document.createElement('div');
+  page.id='pwd-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="pwd-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--text)">Changer le mot de passe</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px">
+        <div class="field"><label>Mot de passe actuel</label><input class="inp" type="password" id="pwd-old" placeholder="••••••" autocomplete="current-password"/></div>
+        <div class="field"><label>Nouveau mot de passe</label><input class="inp" type="password" id="pwd-new" placeholder="••••••" autocomplete="new-password"/></div>
+        <div class="field" style="margin-bottom:4px"><label>Confirme le nouveau mot de passe</label><input class="inp" type="password" id="pwd-new2" placeholder="••••••" autocomplete="new-password"/></div>
+        <div class="auth-err" id="pwd-err"></div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="pwd-confirm" class="btn-main" style="width:100%">Valider</button>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#pwd-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#pwd-confirm').addEventListener('click', async()=>{
+    const errEl=page.querySelector('#pwd-err');
+    errEl.textContent='';
+    const oldPwd=page.querySelector('#pwd-old').value;
+    const newPwd=page.querySelector('#pwd-new').value;
+    const newPwd2=page.querySelector('#pwd-new2').value;
+    if(!oldPwd||!newPwd||!newPwd2){errEl.textContent='Remplis tous les champs';return;}
+    if(myData.pwd!==btoa(unescape(encodeURIComponent(oldPwd)))){errEl.textContent='Mot de passe actuel incorrect';return;}
+    if(newPwd.length<4){errEl.textContent='Nouveau mot de passe trop court (4 min)';return;}
+    if(newPwd!==newPwd2){errEl.textContent='Les nouveaux mots de passe ne correspondent pas';return;}
+    const btn=page.querySelector('#pwd-confirm');
+    btn.disabled=true;btn.textContent='...';
+    try{
+      const hashed=btoa(unescape(encodeURIComponent(newPwd)));
+      await update(ref(db,`spk3/users/${myId}`),{pwd:hashed});
+      myData.pwd=hashed;
+      toast('Mot de passe mis à jour !','ok');
+      page.remove();
+    }catch(e){
+      errEl.textContent='Erreur réseau, réessaie';
+      btn.disabled=false;btn.textContent='Valider';
+    }
+  });
+}
+
+// ── SUPPRIMER MON COMPTE ─────────────────────────────────────
+function openDeleteAccountPage(){
+  const page=document.createElement('div');
+  page.id='delacc-page';
+  page.style.cssText='position:fixed;inset:0;z-index:601;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="delacc-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:600;color:var(--red)">Supprimer mon compte</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+      <div style="text-align:center;margin-bottom:22px">
+        <div style="font-size:2.2rem;margin-bottom:10px">⚠️</div>
+        <div style="font-size:.88rem;color:var(--text2);line-height:1.6;max-width:320px;margin:0 auto">Cette action est <strong style="color:var(--text)">définitive et irréversible</strong>. Ton profil, tes annonces et tes messages seront supprimés. Entre ton mot de passe pour confirmer.</div>
+      </div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px">
+        <div class="field" style="margin-bottom:4px"><label>Mot de passe</label><input class="inp" type="password" id="delacc-pwd" placeholder="••••••" autocomplete="current-password"/></div>
+        <div class="auth-err" id="delacc-err"></div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="delacc-confirm" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--red);color:white;font-family:'Outfit',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer">Supprimer définitivement</button>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#delacc-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#delacc-confirm').addEventListener('click', async()=>{
+    const errEl=page.querySelector('#delacc-err');
+    errEl.textContent='';
+    const pwd=page.querySelector('#delacc-pwd').value;
+    if(!pwd){errEl.textContent='Entre ton mot de passe';return;}
+    if(myData.pwd!==btoa(unescape(encodeURIComponent(pwd)))){errEl.textContent='Mot de passe incorrect';return;}
+    if(myId===ADMIN_ID){errEl.textContent='Le compte admin ne peut pas être supprimé';return;}
+    const ok=await confirmCustom('Es-tu vraiment sûr de vouloir supprimer ton compte ? Cette action ne peut pas être annulée.',{okLabel:'Oui, supprimer'});
+    if(!ok) return;
+    const btn=page.querySelector('#delacc-confirm');
+    btn.disabled=true;btn.textContent='Suppression...';
+    try{
+      await remove(ref(db,`spk3/users/${myId}`));
+      toast('Compte supprimé','ok');
+      page.remove();
+      doLogout();
+    }catch(e){
+      errEl.textContent='Erreur réseau, réessaie';
+      btn.disabled=false;btn.textContent='Supprimer définitivement';
+    }
+  });
+}
+
 
 // ── NAV ────────────────────────────────────────────────────
 function showPage(p){
@@ -816,34 +1017,72 @@ function showQuetes(){
 }
 
 const QUEST_DEFS=[
-  {id:'mondiale',  title:'Collection',  desc:'Débloque 100 brawlers', type:'count'},
-  {id:'lunaire',   title:'Pouvoir 7',         desc:'Passe 100 brawlers au Pouvoir 7',  type:'power', minPower:7},
-  {id:'martienne', title:'Pouvoir 9',         desc:'Passe 100 brawlers au Pouvoir 9',  type:'power', minPower:9},
-  {id:'saturnale', title:'Pouvoir 11',        desc:'Passe 100 brawlers au Pouvoir 11', type:'power', minPower:11},
-  {id:'starrspecial', title:'Championship', desc:'Qualifie-toi pour un Championship', type:'bool'},
+  // — Quêtes de collection —
+  {id:'mondiale',     title:'Collectionneur',   desc:'Débloque 100 brawlers',                          type:'count',  total:100},
+  // — Quêtes de puissance —
+  {id:'lunaire',      title:'Pouvoir 7',         desc:'Passe 100 brawlers au Pouvoir 7',               type:'power',  minPower:7,  total:100},
+  {id:'martienne',    title:'Pouvoir 9',         desc:'Passe 100 brawlers au Pouvoir 9',               type:'power',  minPower:9,  total:100},
+  {id:'saturnale',    title:'Pouvoir 11',        desc:'Passe 100 brawlers au Pouvoir 11',              type:'power',  minPower:11, total:100},
+  // — Quête trophées —
+  {id:'solaire',      title:'Légende',           desc:'Atteins 50 000 trophées',                       type:'trophies', threshold:50000},
+  {id:'meteorique',   title:'Superstar',         desc:'Atteins 100 000 trophées',                      type:'trophies', threshold:100000},
+  // — Quête ranked —
+  {id:'alienne',      title:'Maître',            desc:'Atteins le rang Maître en Ranked',              type:'ranked',   rankGoal:'Maître'},
+  // — Quête championship —
+  {id:'starrspecial', title:'Championship',      desc:'Qualifie-toi pour un Championship',             type:'bool'},
+  // — Quête communauté (Tark) — non liée à l'API BS, basée sur Firebase —
+  {id:'forcestarr',   title:'Ambassadeur',       desc:'Envoie un message à 5 joueurs différents',      type:'messages', threshold:5},
+  // — Quête starr pins —
+  {id:'starr',        title:'Premier contact',   desc:'Envoie ton premier message sur Tark',           type:'messages', threshold:1},
 ];
 
 async function loadQuetes(){
   const list=$('quetes-list');
   if(!list) return;
   try{
-    const [player, collSnap] = await Promise.all([
+    const [player, collSnap, convosSnap] = await Promise.all([
       fetchBsPlayer(myData.bsTag),
-      get(ref(db,`spk3/users/${myId}/collection`))
+      get(ref(db,`spk3/users/${myId}/collection`)),
+      get(ref(db,`spk3/convos/${myId}`))
     ]);
     const owned = collSnap.exists()?collSnap.val():{};
     const brawlers = player.brawlers||[];
-    const total = 100;
+    const trophies = player.trophies||0;
+    const rankedName = translateRank(player.rankedRankName)||'';
+    const RANKED_ORDER=['Bronze','Argent','Or','Diamant','Mythique','Légendaire','Maître','Pro'];
+    const msgCount = convosSnap.exists()?Object.keys(convosSnap.val()||{}).length:0;
+
     renderQuetes(QUEST_DEFS.map(q=>{
       if(q.type==='bool'){
         const done=!!player.isQualifiedFromChampionshipChallenge;
-        return {...q, progress:done?15:0, total:15, done, claimed:!!owned[q.id]};
+        return {...q, progress:done?1:0, total:1, done, claimed:!!owned[q.id]};
       }
-      let raw;
-      if(q.type==='count') raw=brawlers.length;
-      else raw=brawlers.filter(b=>(b.power||0)>=q.minPower).length;
-      const progress=Math.min(raw,total);
-      return {...q, progress, total, done:raw>=total, claimed:!!owned[q.id]};
+      if(q.type==='count'){
+        const raw=brawlers.length;
+        const total=q.total||100;
+        return {...q, progress:Math.min(raw,total), total, done:raw>=total, claimed:!!owned[q.id]};
+      }
+      if(q.type==='power'){
+        const raw=brawlers.filter(b=>(b.power||0)>=q.minPower).length;
+        const total=q.total||100;
+        return {...q, progress:Math.min(raw,total), total, done:raw>=total, claimed:!!owned[q.id]};
+      }
+      if(q.type==='trophies'){
+        const thresh=q.threshold||50000;
+        return {...q, progress:Math.min(trophies,thresh), total:thresh, done:trophies>=thresh, claimed:!!owned[q.id]};
+      }
+      if(q.type==='ranked'){
+        const goalIdx=RANKED_ORDER.findIndex(r=>rankedName.startsWith(r));
+        const myIdx=RANKED_ORDER.findIndex(r=>rankedName.startsWith(r));
+        const targetIdx=RANKED_ORDER.indexOf(q.rankGoal||'Maître');
+        const done=myIdx>=targetIdx && myIdx>=0;
+        return {...q, progress:done?targetIdx+1:Math.max(0,myIdx+1), total:targetIdx+1, done, claimed:!!owned[q.id]};
+      }
+      if(q.type==='messages'){
+        const thresh=q.threshold||1;
+        return {...q, progress:Math.min(msgCount,thresh), total:thresh, done:msgCount>=thresh, claimed:!!owned[q.id]};
+      }
+      return {...q, progress:0, total:1, done:false, claimed:!!owned[q.id]};
     }));
   }catch(e){
     list.innerHTML=`<div style="text-align:center;color:var(--text3);font-size:.85rem;padding:24px 0">Impossible de charger tes quêtes. Réessaie plus tard.</div>`;
@@ -1681,10 +1920,7 @@ async function showProfile(uid, fromMessages=false){
               <button data-act="block" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:${isBlocked?'var(--text)':'var(--red)'};font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">${isBlocked?'✅ Débloquer':'⛔ Bloquer'} @${esc(uid)}</button>
               <div style="height:1px;background:var(--border);margin:0 16px"></div>
               <button data-act="report" style="text-align:left;width:100%;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler @${esc(uid)}</button>
-              <div style="height:1px;background:var(--border);margin:0 16px"></div>
-              <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
             </div>`;
-          overlay.querySelector('[data-act="cancel"]').addEventListener('click', ()=>overlay.remove());
           overlay.querySelector('[data-act="block"]').addEventListener('click', async btnEvt=>{
             const blockBtn=btnEvt.currentTarget;
             blockBtn.disabled=true;
@@ -2865,7 +3101,7 @@ async function loadAdmin(){
   if(myId!==ADMIN_ID) return;
   showPage('admin');
   $('page-admin').innerHTML=`
-    <div style="width:100%;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px">
+    <div style="width:100%;padding:14px 16px 100px;display:flex;flex-direction:column;gap:14px">
       <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;color:var(--text)">Panneau Admin</div>
 
       <!-- Recherche -->
@@ -3016,6 +3252,101 @@ async function renameUserHandle(oldId, newId){
   await Promise.all(ops);
 }
 
+// ── ÉDITER UN UTILISATEUR (admin) ───────────────────────────
+function openEditUserPage(userId){
+  const u=admUsers.find(x=>x.id===userId);
+  if(!u){ toast('Utilisateur introuvable','err'); return; }
+  const isAdminAccount=userId===ADMIN_ID;
+
+  const page=document.createElement('div');
+  page.id='edit-user-page';
+  page.style.cssText='position:fixed;inset:0;z-index:600;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+  page.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-back" style="width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:var(--text)">←</button>
+      <img src="${esc(u.avatar||DEFAV)}" style="width:34px;height:34px;border-radius:50%;object-fit:contain;background:var(--bg2);flex-shrink:0"/>
+      <div style="min-width:0">
+        <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Éditer @${esc(u.name)}</div>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 16px 100px">
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Pseudo</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Pseudo (@)</label>
+          <input class="inp" id="eu-name" value="${esc(u.name)}" maxlength="20" ${isAdminAccount?'disabled':''}/>
+        </div>
+        ${isAdminAccount?`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Le compte admin ne peut pas être renommé.</div>`:`<div style="font-size:.78rem;color:var(--text3);margin-top:6px">Renommer met à jour automatiquement ses posts, messages, annonces et abonnements.</div>`}
+        <div id="eu-name-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Mot de passe</div>
+      <div style="background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:24px">
+        <div class="field" style="margin-bottom:4px">
+          <label>Nouveau mot de passe</label>
+          <input class="inp" type="password" id="eu-pwd" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password"/>
+        </div>
+        <div id="eu-pwd-err" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      </div>
+
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0">
+      <button id="eu-save" class="btn-main" style="width:100%">Enregistrer</button>
+    </div>`;
+  document.body.appendChild(page);
+  page.querySelector('#eu-back').addEventListener('click',()=>page.remove());
+
+  page.querySelector('#eu-save').addEventListener('click', async()=>{
+    const nameErrEl=page.querySelector('#eu-name-err');
+    const pwdErrEl=page.querySelector('#eu-pwd-err');
+    nameErrEl.textContent='';pwdErrEl.textContent='';
+
+    const newName=isAdminAccount?userId:page.querySelector('#eu-name').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+    const newPwd=page.querySelector('#eu-pwd').value;
+
+    if(!isAdminAccount && !newName){ nameErrEl.textContent='Pseudo invalide'; return; }
+    if(newPwd && newPwd.length<4){ pwdErrEl.textContent='Mot de passe trop court (4 min)'; return; }
+
+    const renaming=!isAdminAccount && newName!==userId;
+    if(renaming){
+      const existSnap=await get(ref(db,`spk3/users/${newName}`));
+      if(existSnap.exists()){ nameErrEl.textContent=`@${newName} est déjà pris`; return; }
+    }
+    if(renaming){
+      const ok=await confirmCustom(`Renommer @${userId} en @${newName} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false});
+      if(!ok) return;
+    }
+
+    const btn=page.querySelector('#eu-save');
+    btn.disabled=true;btn.textContent='Enregistrement...';
+    try{
+      let finalId=userId;
+      if(renaming){
+        await renameUserHandle(userId,newName);
+        finalId=newName;
+        if(u){ u.id=newName; u.name=newName; u.fullname=newName; }
+        if(userId===myId){
+          myId=newName; myData.name=newName; myData.fullname=newName; saveS();
+          if($('shandle'))$('shandle').textContent='@'+myId;
+        }
+      }
+      if(newPwd){
+        const hashed=btoa(unescape(encodeURIComponent(newPwd)));
+        await update(ref(db,`spk3/users/${finalId}`),{pwd:hashed});
+        if(u) u.pwd=hashed;
+        if(finalId===myId) myData.pwd=hashed;
+      }
+      page.remove();
+      toast(renaming?`@${userId} renommé en @${finalId}`:'Modifications enregistrées','ok');
+      await fetchAdminData();
+    }catch(err){
+      toast('Erreur : '+(err?.message||err),'err');
+      btn.disabled=false;btn.textContent='Enregistrer';
+    }
+  });
+}
+
 function renderAdmUsers(search=''){
   const filtered=admUsers.filter(u=>
     !search||(u.name||'').toLowerCase().includes(search)||((u.fullname||'').toLowerCase()).includes(search));
@@ -3043,35 +3374,9 @@ function renderAdmUsers(search=''){
     }));
 
   $('adm-list').querySelectorAll('[data-rename]').forEach(btn=>
-    btn.addEventListener('click',async e=>{
+    btn.addEventListener('click',e=>{
       e.stopPropagation();
-      const oldId=btn.dataset.rename;
-      if(oldId===ADMIN_ID){ toast("Tu ne peux pas renommer le compte admin (cela bloquerait l'accès au panneau)",'err'); return; }
-      const u=admUsers.find(u=>u.id===oldId);
-      const current=u?.name||oldId;
-      const input=prompt(`Nouveau pseudo (@) pour @${oldId} :`, current);
-      if(input===null) return;
-      const newId=input.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
-      if(!newId){ toast('Pseudo invalide','err'); return; }
-      if(newId===oldId) return;
-      // Vérifier que le nouveau pseudo n'est pas déjà pris
-      const existSnap=await get(ref(db,`spk3/users/${newId}`));
-      if(existSnap.exists()){ toast(`@${newId} est déjà pris`,'err'); return; }
-      if(!(await confirmCustom(`Renommer @${oldId} en @${newId} ?\nTous ses posts, messages, annonces et abonnements seront mis à jour.`, {okLabel:'Renommer', danger:false}))) return;
-      toast('Renommage en cours...');
-      try{
-        await renameUserHandle(oldId,newId);
-      }catch(err){
-        toast('Erreur : '+(err?.message||err),'err');
-        return;
-      }
-      if(u){ u.id=newId; u.name=newId; u.fullname=newId; }
-      if(oldId===myId){
-        myId=newId; myData.name=newId; myData.fullname=newId; saveS();
-        if($('shandle'))$('shandle').textContent='@'+myId;
-      }
-      toast(`@${oldId} renommé en @${newId}`,'ok');
-      await fetchAdminData();
+      openEditUserPage(btn.dataset.rename);
     }));
 
   $('adm-list').querySelectorAll('[data-del-user]').forEach(btn=>
