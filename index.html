@@ -815,16 +815,16 @@ function showSettings(){
 
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Application</div>
       <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
-        ${settingsRowHTML({icon:'📲',label:"Télécharger l'app Android",sub:'Installe Tark sur ton téléphone (.apk)',id:'set-apk'})}
+        ${settingsRowHTML({icon:'<img src="logo/downloadapk.png" style="width:22px;height:22px;object-fit:contain"/>',label:"Télécharger l'app Android",sub:'Installe Tark sur ton téléphone (.apk)',id:'set-apk'})}
       </div>
 
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Compte</div>
       <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
-        ${settingsRowHTML({icon:'🔒',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
+        ${settingsRowHTML({icon:'<img src="logo/changermdp.png" style="width:22px;height:22px;object-fit:contain"/>',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
         <div style="height:1px;background:var(--border);margin:0 16px"></div>
-        ${settingsRowHTML({icon:'🚪',label:'Se déconnecter',id:'set-logout'})}
+        ${settingsRowHTML({icon:'<img src="logo/sedeco.png" style="width:22px;height:22px;object-fit:contain"/>',label:'Se déconnecter',id:'set-logout'})}
         <div style="height:1px;background:var(--border);margin:0 16px"></div>
-        ${settingsRowHTML({icon:'🗑️',label:'Supprimer mon compte',sub:'Action définitive et irréversible',id:'set-delete',danger:true})}
+        ${settingsRowHTML({icon:'<img src="logo/delete account.png" style="width:22px;height:22px;object-fit:contain"/>',label:'Supprimer mon compte',sub:'Action définitive et irréversible',id:'set-delete',danger:true})}
       </div>
     </div>`;
   page.querySelector('#set-apk').addEventListener('click',()=>{
@@ -2290,24 +2290,21 @@ async function openConvo(otherUid){
     overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:998;display:flex;align-items:flex-end;justify-content:center';
     const actions=[];
     if(mine && !m.pin){
-      actions.push(`<button data-act="edit" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">✏️ Modifier</button>`);
+      actions.push(`<button data-act="edit" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px"><img src="logo/modifier.png" style="width:20px;height:20px;object-fit:contain;flex-shrink:0"/> Modifier</button>`);
     }
     if(mine){
-      actions.push(`<button data-act="delete" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--red);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🗑️ Supprimer</button>`);
+      actions.push(`<button data-act="delete" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--red);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px"><img src="logo/supprimer.png" style="width:20px;height:20px;object-fit:contain;flex-shrink:0"/> Supprimer</button>`);
     }else{
-      actions.push(`<button data-act="report" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px">🚩 Signaler</button>`);
+      actions.push(`<button data-act="report" style="text-align:left;padding:13px 16px;border:none;background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;cursor:pointer;display:flex;align-items:center;gap:10px"><img src="logo/signaler.png" style="width:20px;height:20px;object-fit:contain;flex-shrink:0"/> Signaler</button>`);
     }
     overlay.innerHTML=`
       <div style="background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:420px;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:var(--shadow-lg)">
         <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 6px"></div>
         ${actions.join('<div style="height:1px;background:var(--border);margin:0 16px"></div>')}
-        <div style="height:1px;background:var(--border);margin:0 16px"></div>
-        <button data-act="cancel" style="text-align:center;padding:13px 16px;border:none;background:none;color:var(--text2);font-family:'Outfit',sans-serif;font-size:.9rem;cursor:pointer;width:100%">Annuler</button>
       </div>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 
-    overlay.querySelector('[data-act="cancel"]')?.addEventListener('click', ()=>overlay.remove());
     overlay.querySelector('[data-act="edit"]')?.addEventListener('click', ()=>{
       overlay.remove();
       const inp=$('chat-input');
