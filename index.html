@@ -486,9 +486,6 @@ input[type=file]{display:none}
   <div class="topbar">
     <div class="brand" id="logo-home">Tark</div>
     <div class="topbar-r">
-      <button class="tbtn" id="btn-settings" title="Paramètres" aria-label="Paramètres">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      </button>
       <img class="top-av" id="top-av" src="" alt="Mon profil"/>
     </div>
   </div>
@@ -528,6 +525,10 @@ input[type=file]{display:none}
     <button class="bnav-btn" id="bnav-profile">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Profil
+    </button>
+    <button class="bnav-btn" id="btn-settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Paramètres
     </button>
     <button class="bnav-btn" id="bnav-admin" style="display:none">
       <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/></svg>
@@ -813,6 +814,11 @@ function openSettingsPage(){
     <div style="flex:1;overflow-y:auto;padding:20px 16px 100px">
 
 
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Application</div>
+      <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
+        ${settingsRowHTML({icon:'📲',label:'Télécharger l\'app Android',sub:'Installe Tark sur ton téléphone (.apk)',id:'set-apk'})}
+      </div>
+
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin:0 4px 8px">Compte</div>
       <div style="border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px">
         ${settingsRowHTML({icon:'🔒',label:'Changer le mot de passe',sub:'Mets à jour ton mot de passe',id:'set-pwd'})}
@@ -825,6 +831,9 @@ function openSettingsPage(){
     </div>`;
   document.body.appendChild(page);
   page.querySelector('#settings-back').addEventListener('click',()=>page.remove());
+  page.querySelector('#set-apk').addEventListener('click',()=>{
+    window.open('https://usagi840.github.io/Tark/tark-v1.apk','_blank');
+  });
   page.querySelector('#set-pwd').addEventListener('click',openChangePasswordPage);
   page.querySelector('#set-logout').addEventListener('click',async()=>{
     const ok=await confirmCustom('Se déconnecter ?',{okLabel:'Se déconnecter',danger:false});
@@ -1027,11 +1036,11 @@ const QUEST_DEFS=[
   {id:'solaire',      title:'Légende',           desc:'Atteins 50 000 trophées',                       type:'trophies', threshold:50000},
   {id:'meteorique',   title:'Superstar',         desc:'Atteins 100 000 trophées',                      type:'trophies', threshold:100000},
   // — Quête ranked —
-  {id:'alienne',      title:'Maître',            desc:'Atteins le rang Maître en Ranked',              type:'ranked',   rankGoal:'Maître'},
+  {id:'alienne',      title:'Master',            desc:'Atteins le rang Master en Ranked',              type:'ranked',   rankGoal:'Master'},
   // — Quête championship —
   {id:'starrspecial', title:'Championship',      desc:'Qualifie-toi pour un Championship',             type:'bool'},
   // — Quête communauté (Tark) — non liée à l'API BS, basée sur Firebase —
-  {id:'forcestarr',   title:'Ambassadeur',       desc:'Envoie un message à 5 joueurs différents',      type:'messages', threshold:5},
+  {id:'forcestarr',   title:'Ambassadeur',       desc:'Envoie un message à 5 joueurs différents',      type:'messages', threshold:5, rewardEmote:'starr'},
   // — Quête starr pins —
   {id:'starr',        title:'Premier contact',   desc:'Envoie ton premier message sur Tark',           type:'messages', threshold:1},
 ];
@@ -1049,7 +1058,7 @@ async function loadQuetes(){
     const brawlers = player.brawlers||[];
     const trophies = player.trophies||0;
     const rankedName = translateRank(player.rankedRankName)||'';
-    const RANKED_ORDER=['Bronze','Argent','Or','Diamant','Mythique','Légendaire','Maître','Pro'];
+    const RANKED_ORDER=['Bronze','Argent','Or','Diamant','Mythique','Légendaire','Master','Pro'];
     const msgCount = convosSnap.exists()?Object.keys(convosSnap.val()||{}).length:0;
 
     renderQuetes(QUEST_DEFS.map(q=>{
@@ -1074,7 +1083,7 @@ async function loadQuetes(){
       if(q.type==='ranked'){
         const goalIdx=RANKED_ORDER.findIndex(r=>rankedName.startsWith(r));
         const myIdx=RANKED_ORDER.findIndex(r=>rankedName.startsWith(r));
-        const targetIdx=RANKED_ORDER.indexOf(q.rankGoal||'Maître');
+        const targetIdx=RANKED_ORDER.indexOf(q.rankGoal||'Master');
         const done=myIdx>=targetIdx && myIdx>=0;
         return {...q, progress:done?targetIdx+1:Math.max(0,myIdx+1), total:targetIdx+1, done, claimed:!!owned[q.id]};
       }
@@ -1094,8 +1103,17 @@ function renderQuetes(quests){
   if(!list) return;
   list.innerHTML=quests.map(q=>{
     const icon=FAME_ICONS.find(f=>f.id===q.id);
+    // Image: si rewardEmote défini, utilise l'emote brawler, sinon l'icône gloire
+    const imgSrc = q.rewardEmote
+      ? `assets/${q.rewardEmote}_pin.png`
+      : (icon ? icon.img : '');
     const pct=Math.min(100,Math.round((q.progress/q.total)*100));
-    const progressLabel = `${q.progress}/${q.total}`;
+    // Label de progression spécial pour les quêtes bool (championship)
+    const progressLabel = q.type==='bool'
+      ? (q.done ? '✅ Qualifié' : '❌ Non qualifié')
+      : `${q.progress}/${q.total}`;
+    // Pas de barre de progression pour les quêtes bool
+    const showBar = q.type !== 'bool';
     let btnHTML;
     if(q.claimed){
       btnHTML=`<button disabled style="padding:9px 14px;border-radius:10px;border:none;background:var(--bg2);color:var(--text3);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:default;white-space:nowrap">Récupérée ✓</button>`;
@@ -1106,14 +1124,14 @@ function renderQuetes(quests){
     }
     return `
     <div class="scard" style="padding:16px;display:flex;gap:14px;align-items:center">
-      <img src="${icon?icon.img:''}" style="width:46px;height:46px;object-fit:contain;border-radius:50%;background:var(--bg2);flex-shrink:0;opacity:${q.done?1:.45}"/>
+      <img src="${imgSrc}" style="width:46px;height:46px;object-fit:contain;border-radius:50%;background:var(--bg2);flex-shrink:0;opacity:${q.done?1:.45}"/>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:.9rem;color:var(--text)">${esc(q.title)}</div>
         <div style="font-size:.76rem;color:var(--text2);margin-bottom:8px">${esc(q.desc)}</div>
-        <div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden">
+        ${showBar?`<div style="height:6px;background:var(--bg2);border-radius:4px;overflow:hidden">
           <div style="height:100%;width:${pct}%;background:var(--accent);transition:width .3s"></div>
-        </div>
-        <div style="font-size:.7rem;color:var(--text3);margin-top:4px">${progressLabel}</div>
+        </div>`:''}
+        <div style="font-size:.7rem;color:${q.type==='bool'?(q.done?'var(--green)':'var(--text3)'):'var(--text3)'};margin-top:4px">${progressLabel}</div>
       </div>
       ${btnHTML}
     </div>`;
