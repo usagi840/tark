@@ -752,9 +752,8 @@ $('btn-signup').addEventListener('click',async()=>{
 
 // ── BOOT APP ───────────────────────────────────────────────
 function bootApp(){
-  // Redirige automatiquement vers la langue sauvegardée sur le compte
-  // (ce fichier correspond à la langue 'en' par défaut)
-  const THIS_PAGE_LANG='en';
+  // Ce fichier est la version française
+  const THIS_PAGE_LANG='fr';
   if(myData.lang && myData.lang!==THIS_PAGE_LANG){
     const target=LANGS.find(l=>l.code===myData.lang);
     if(target){ window.location.href=target.file; return; }
@@ -1054,7 +1053,7 @@ async function loadQuetes(){
     const owned = collSnap.exists()?collSnap.val():{};
     const brawlers = player.brawlers||[];
     const trophies = player.trophies||0;
-    const rankedName = translateRank(player.rankedRankName)||'';
+    const rankedName = translateRank(player.highestAllTimeRankedRankName)||translateRank(player.rankedRankName)||'';
     const RANKED_ORDER=['Bronze','Argent','Or','Diamant','Mythique','Légendaire','Master','Pro'];
     const msgCount = convosSnap.exists()?Object.keys(convosSnap.val()||{}).length:0;
 
@@ -3657,7 +3656,7 @@ async function refreshBsStats(){
   try{
     const player = await fetchBsPlayer(myData.bsTag);
     const trophies = player.trophies ?? myData.statTrophees;
-    const ranked = translateRank(player.rankedRankName) ?? player.rankedRank ?? myData.statRanked;
+    const ranked = translateRank(player.highestAllTimeRankedRankName) ?? translateRank(player.rankedRankName) ?? myData.statRanked;
     await update(ref(db,`spk3/users/${myId}`),{
       statTrophees: String(trophies),
       statRanked: ranked ? String(ranked) : myData.statRanked
@@ -3809,7 +3808,7 @@ function renderVerifyStep(){
         const player=await fetchBsPlayer(verifyState.tag);
         if(player.icon?.id===verifyState.targetIcon2){
           const trophies=player.trophies??'—';
-          const ranked=translateRank(player.rankedRankName)??'—';
+          const ranked=translateRank(player.highestAllTimeRankedRankName)??translateRank(player.rankedRankName)??'—';
           await update(ref(db,`spk3/users/${myId}`),{
             bsTag:verifyState.tag,
             bsVerified:true,
