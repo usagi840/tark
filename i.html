@@ -320,106 +320,180 @@
 
     </div>
 
-    <script>
-        const PROXY_URL = "https://proxy.royaleapi.com/v1";
-        const DARRYL_ID = "16000015";
-        const ROSA_ID = "16000022";
+      <!-- ===================================================================
+       LOGIQUE JAVASCRIPT DE CONNEXION AVEC TON SERVEUR BACKEND
+  =================================================================== -->
+  <script>
+    // Configuration de l'adresse de ton serveur Node.js local
+    // (Remplace par l'URL de ton serveur en production si besoin, ex: https://ton-site.com)
+    const SERVER_URL = "http://localhost:3000"; 
 
-        async function scanPlayer() {
-            let tag = document.getElementById('playerTag').value.trim().toUpperCase();
-            const token = document.getElementById('apiToken').value.trim();
+    // Variables globales pour suivre l'état du défi
+    let currentTag = "";
+    let dailyGoal = 1000;
+    let initialTrophies = 0;
 
-            if (!tag) {
-                alert("Entre un tag de joueur valide !");
-                return;
-            }
-            if (!token) {
-                alert("Entre ton Token API Brawl Stars pour lancer les requêtes !");
-                return;
-            }
+    // Récupération des éléments du DOM indispensables
+    const btnStart = document.getElementById('btnStart');
+    const setupLoader = document.getElementById('setupLoader');
+    const screenSetup = document.getElementById('screenSetup');
+    const appContainer = document.getElementById('app');
 
-            if (tag.startsWith('#')) tag = tag.substring(1);
-            const fullTag = `#${tag}`;
+    // ── 1. GESTION DU BOUTON : DÉMARRER LE DÉFI ──
+    btnStart.addEventListener('click', async () => {
+      const rawTag = document.getElementById('inputPlayerTag').value.trim();
+      dailyGoal = parseInt(document.getElementById('inputDailyGoal').value) || 1000;
 
-            // Reset UI
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('navTabs').style.display = 'none';
-            hideAllCards();
+      if (!rawTag) {
+        alert("Entre un tag de joueur Brawl Stars valide !");
+        return;
+      }
 
-            try {
-                const headers = { 'Authorization': `Bearer ${token}` };
+      // Nettoyage automatique du tag (enlève le # et passe en majuscules)
+      currentTag = rawTag.replace('#', '').toUpperCase();
 
-                // 1. Fetch Profil Général
-                const resPlayer = await fetch(`${PROXY_URL}/players/%23${tag}`, { headers });
-                if (!resPlayer.ok) throw new Error("Impossible de trouver ce joueur. Vérifie le tag et la clé API.");
-                const pData = await resPlayer.json();
+      // Affichage du spinner de chargement et blocage du bouton
+      setupLoader.classList.remove('hidden');
+      btnStart.disabled = true;
 
-                // On extrait le pays du joueur (par défaut FR si indisponible dans le profil de base)
-                // L'API ne stocke pas directement la locale dans /players, on scan le classement FR par défaut.
-                const country = "FR"; 
+      // Appel de la fonction pour interroger ton serveur
+      const success = await connectToBackend(currentTag);
 
-                // Mise à jour de l'affichage global
-                document.getElementById('pName').innerText = pData.name;
-                document.getElementById('pTag').innerText = pData.tag;
-                document.getElementById('pTrophies').innerText = pData.trophies.toLocaleString();
-                document.getElementById('pLevel').innerText = pData.expLevel;
-                document.getElementById('p3v3').innerText = pData['3v3Victories'].toLocaleString();
+      if (success) {
+        // Transition visuelle : Basculement d'écran vers l'App
+        screenSetup.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        
+        // Initialisation des données de l'objectif sur l'interface globale
+        document.getElementById('goalRecapValue').innerText = dailyGoal.toLocaleString();
+        document.getElementById('goalTotalValue').innerText = (dailyGoal * 30).toLocaleString();
+        document.getElementById('statCurrentDay').innerText = "J—1";
+        
+        // Génération automatique du calendrier visuel des 30 jours
+        generateCalendarHTML();
+      } else {
+        // Reset des boutons en cas d'erreur de communication
+        setupLoader.classList.add('hidden');
+        btnStart.disabled = false;
+      }
+    });
 
-                // Extraction des trophées spécifiques des Brawlers du joueur
-                const darrylObj = pData.brawlers.find(b => b.id == DARRYL_ID);
-                const rosaObj = pData.brawlers.find(b => b.id == ROSA_ID);
+    // ── 2. FONCTION COMMUNICANTE AVEC TON SERVEUR ──
+    async function connectToBackend(tag) {
+      const apiDot = document.getElementById('apiDot');
+      const apiLabel = document.getElementById('apiLabel');
 
-                document.getElementById('darrylTrophies').innerText = darrylObj ? darrylObj.trophies : 0;
-                document.getElementById('rosaTrophies').innerText = rosaObj ? rosaObj.trophies : 0;
+      try {
+        // Envoi de la requête au serveur Node.js (qui lui, possède le Token masqué)
+        const response = await fetch(`${SERVER_URL}/api/player/${tag}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
 
-                // 2. Fetch Classements Globaux en parallèle
-                const [resGlobalPlayers, resGlobalDarryl, resGlobalRosa, resFrDarryl, resFrRosa] = await Promise.all([
-                    fetch(`${PROXY_URL}/rankings/global/players`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
-                    fetch(`${PROXY_URL}/rankings/global/brawlers/${DARRYL_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
-                    fetch(`${PROXY_URL}/rankings/global/brawlers/${ROSA_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
-                    fetch(`${PROXY_URL}/rankings/${country}/brawlers/${DARRYL_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
-                    fetch(`${PROXY_URL}/rankings/${country}/brawlers/${ROSA_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]}))
-                ]);
-
-                // Fonction utilitaire pour chercher la place
-                const checkRank = (list, tag) => {
-                    if (!list || !list.items) return '<span class="not-ranked">Hors Top 200</span>';
-                    const index = list.items.findIndex(item => item.tag === tag);
-                    return index !== -1 ? `<span class="rank-badge">TOP ${index + 1}</span>` : '<span class="not-ranked">Hors Top 200</span>';
-                };
-
-                // Injecter les vrais classements trouvés
-                document.getElementById('globalRank').innerHTML = checkRank(resGlobalPlayers, fullTag);
-                document.getElementById('darrylRankGlobal').innerHTML = checkRank(resGlobalDarryl, fullTag);
-                document.getElementById('rosaRankGlobal').innerHTML = checkRank(resGlobalRosa, fullTag);
-                document.getElementById('darrylRankFR').innerHTML = checkRank(resFrDarryl, fullTag);
-                document.getElementById('rosaRankFR').innerHTML = checkRank(resFrRosa, fullTag);
-
-                // Affichage final des résultats
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('navTabs').style.display = 'flex';
-                switchTab('general');
-
-            } catch (err) {
-                document.getElementById('loader').style.display = 'none';
-                alert("Erreur lors de la récupération des données : " + err.message);
-            }
+        if (!response.ok) {
+          throw new Error(`Le serveur a renvoyé une erreur : ${response.status}`);
         }
 
-        function hideAllCards() {
-            document.getElementById('generalCard').style.display = 'none';
-            document.getElementById('darrylCard').style.display = 'none';
-            document.getElementById('rosaCard').style.display = 'none';
-        }
+        const data = await response.json();
 
-        function switchTab(tabName) {
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(t => t.classList.remove('active'));
-            hideAllCards();
+        // Stockage des trophées de départ pour calculer la progression future
+        if (initialTrophies === 0) initialTrophies = data.trophies;
 
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            document.getElementById(`${tabName}Card`).style.display = 'block';
-        }
-    </script>
+        // Écriture dynamique des données reçues dans ton squelette HTML d'origine
+        document.getElementById('playerName').innerText = data.name;
+        document.getElementById('playerTag').innerText = `#${data.tag}`;
+        document.getElementById('playerTrophiesLive').innerText = data.trophies.toLocaleString();
+        
+        // Remplacement des "?" d'avatars par l'ID d'icône renvoyé par l'API
+        const avatarId = data.icon ? data.icon.id : "👾";
+        document.getElementById('playerAvatar').innerText = avatarId;
+        document.getElementById('playerAvatarLg').innerText = avatarId;
+
+        // Mise à jour de la topbar (Indicateur API au Vert)
+        apiDot.className = "api-dot online";
+        apiLabel.innerText = "Connecté";
+        
+        // Date et heure de la synchronisation réussie
+        document.getElementById('lastSyncLabel').innerText = `Dernière sync : ${new Date().toLocaleTimeString()}`;
+
+        // Calcul et mise à jour de l'encadré "Progression globale"
+        const currentGain = data.trophies - initialTrophies;
+        document.getElementById('statTotalGain').innerText = currentGain >= 0 ? `+${currentGain}` : currentGain;
+
+        return true;
+
+      } catch (error) {
+        console.error("Impossible de joindre le backend :", error);
+        alert("Erreur de connexion avec le serveur. Assure-toi que ton script Node.js est bien lancé sur le port 3000.");
+        apiDot.className = "api-dot";
+        apiLabel.innerText = "Déconnecté";
+        return false;
+      }
+    }
+
+    // ── 3. BOUTON ACTUALISER (ACCUEIL) ──
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      if (currentTag) connectToBackend(currentTag);
+    });
+
+    // ── 4. LOGIQUE DE NAVIGATION DES ONGLETS (BNAV) ──
+    const navButtons = document.querySelectorAll('.bnav-btn');
+    const pages = document.querySelectorAll('.page');
+
+    navButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // Nettoyage de la classe active sur les boutons du bas
+        navButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Masquage de toutes les pages de l'application
+        pages.forEach(p => p.classList.remove('active'));
+
+        // Activation de la page ciblée (Conversion de l'ID bnav en ID page)
+        const targetPageId = button.id.replace('bnav-', 'page-');
+        document.getElementById(targetPageId).classList.add('active');
+      });
+    });
+
+    // ── 5. SYSTÈME DE RÉINITIALISATION DU MOIS ──
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm("Attention ! Es-tu sûr de vouloir effacer ta session et réinitialiser le défi des 30 jours ?")) {
+        appContainer.classList.add('hidden');
+        screenSetup.classList.remove('hidden');
+        setupLoader.classList.add('hidden');
+        btnStart.disabled = false;
+        
+        // Nettoyage des variables
+        currentTag = "";
+        initialTrophies = 0;
+        document.getElementById('inputPlayerTag').value = "";
+      }
+    });
+
+    // ── 6. FONCTION DE GÉNÉRATION DU CALENDRIER DES 30 JOURS ──
+    function generateCalendarHTML() {
+      const calendarList = document.getElementById('calendarList');
+      calendarList.innerHTML = ""; // Reset du texte par défaut
+
+      // Boucle pour injecter dynamiquement les 30 lignes demandées par ton projet
+      for (let i = 1; i <= 30; i++) {
+        const targetForDay = initialTrophies + (dailyGoal * i);
+        
+        const dayRow = document.createElement('div');
+        dayRow.className = "calendar-day-row"; // Pense à styliser cette classe dans ton CSS
+        dayRow.style.padding = "10px 0";
+        dayRow.style.borderBottom = "1px solid var(--border)";
+        dayRow.style.display = "flex";
+        dayRow.style.justifyContent = "space-between";
+        
+        dayRow.innerHTML = `
+          <span><strong>Jour ${i}</strong></span>
+          <span style="color: var(--text-muted)">Palier requis : ${targetForDay.toLocaleString()} tr</span>
+        `;
+        calendarList.appendChild(dayRow);
+      }
+    }
+  </script>
+    
 </body>
 </html>
