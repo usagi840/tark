@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tark - Tracker Brawl Stars</title>
+    <style>
+        :root {
+            --bg-dark: #12141c;
+            --card-bg: #1a1d29;
+            --accent-blue: #3b82f6;
+            --accent-gold: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #2d3142;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Style inspiré directement de l'interface Tark */
+        header {
+            width: 100%;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-blue);
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 30px 20px;
+            box-sizing: border-box;
+        }
+
+        /* Section de recherche Tark */
+        .search-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .search-box h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text-main);
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        input:focus {
+            outline: 2px solid var(--accent-blue);
+        }
+
+        button {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: var(--accent-gold);
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        /* Système d'onglets pour naviguer */
+        .tabs {
+            display: none;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background-color: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        /* Cartes de résultats */
+        .result-card {
+            display: none;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .profile-name {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .profile-tag {
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            align-items: center;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-weight: bold;
+        }
+
+        .rank-badge {
+            background-color: var(--accent-gold);
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .not-ranked {
+            color: #ef4444;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Tark</div>
+        <div class="nav-links">
+            <span>Recherche</span>
+            <span>Profil</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Configuration Token API -->
+        <div class="search-box" style="margin-bottom: 15px; border-color: rgba(245, 158, 11, 0.3);">
+            <h3 style="color: var(--accent-gold);">Configuration Clé API</h3>
+            <input type="password" id="apiToken" placeholder="Colle ton Token API Brawl Stars ici" style="width: 100%; box-sizing: border-box;">
+            <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0;">Les requêtes passent par le proxy RoyaleAPI pour contourner le blocage CORS du navigateur.</p>
+        </div>
+
+        <!-- Boite de Recherche -->
+        <div class="search-box">
+            <h3>Choisis ton brawler / Tag du compte</h3>
+            <div class="input-group">
+                <input type="text" id="playerTag" placeholder="Ex: 2Y0G8V9P" value="2Y0G8V9P">
+                <button onclick="scanPlayer()">Scanner</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loader">Scan en cours via l'API... Patienter...</div>
+
+        <!-- Onglets de Navigation -->
+        <div class="tabs" id="navTabs">
+            <div class="tab active" id="tab-general" onclick="switchTab('general')">Profil</div>
+            <div class="tab" id="tab-darryl" onclick="switchTab('darryl')">Top Darryl</div>
+            <div class="tab" id="tab-rosa" onclick="switchTab('rosa')">Top Rosa</div>
+        </div>
+
+        <!-- Profil Général -->
+        <div id="generalCard" class="result-card">
+            <div class="profile-header">
+                <div class="profile-name" id="pName">-</div>
+                <div class="profile-tag" id="pTag">#000000</div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Trophées Globaux</span>
+                <span class="stat-value" id="pTrophies">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Niveau de compte</span>
+                <span class="stat-value" id="pLevel">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Victoires 3v3</span>
+                <span class="stat-value" id="p3v3">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Top Mondial (Trophées Globaux)</span>
+                <span class="stat-value" id="globalRank">-</span>
+            </div>
+        </div>
+
+        <!-- Onglet Darryl -->
+        <div id="darrylCard" class="result-card">
+            <div class="profile-header">
+                <div class="profile-name">Statistiques Darryl</div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Trophées Darryl actuels</span>
+                <span class="stat-value" id="darrylTrophies">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Classement France (FR)</span>
+                <span class="stat-value" id="darrylRankFR">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Classement Monde (Global)</span>
+                <span class="stat-value" id="darrylRankGlobal">-</span>
+            </div>
+        </div>
+
+        <!-- Onglet Rosa -->
+        <div id="rosaCard" class="result-card">
+            <div class="profile-header">
+                <div class="profile-name">Statistiques Rosa</div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Trophées Rosa actuels</span>
+                <span class="stat-value" id="rosaTrophies">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Classement France (FR)</span>
+                <span class="stat-value" id="rosaRankFR">-</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Classement Monde (Global)</span>
+                <span class="stat-value" id="rosaRankGlobal">-</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const PROXY_URL = "https://proxy.royaleapi.com/v1";
+        const DARRYL_ID = "16000015";
+        const ROSA_ID = "16000022";
+
+        async function scanPlayer() {
+            let tag = document.getElementById('playerTag').value.trim().toUpperCase();
+            const token = document.getElementById('apiToken').value.trim();
+
+            if (!tag) {
+                alert("Entre un tag de joueur valide !");
+                return;
+            }
+            if (!token) {
+                alert("Entre ton Token API Brawl Stars pour lancer les requêtes !");
+                return;
+            }
+
+            if (tag.startsWith('#')) tag = tag.substring(1);
+            const fullTag = `#${tag}`;
+
+            // Reset UI
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('navTabs').style.display = 'none';
+            hideAllCards();
+
+            try {
+                const headers = { 'Authorization': `Bearer ${token}` };
+
+                // 1. Fetch Profil Général
+                const resPlayer = await fetch(`${PROXY_URL}/players/%23${tag}`, { headers });
+                if (!resPlayer.ok) throw new Error("Impossible de trouver ce joueur. Vérifie le tag et la clé API.");
+                const pData = await resPlayer.json();
+
+                // On extrait le pays du joueur (par défaut FR si indisponible dans le profil de base)
+                // L'API ne stocke pas directement la locale dans /players, on scan le classement FR par défaut.
+                const country = "FR"; 
+
+                // Mise à jour de l'affichage global
+                document.getElementById('pName').innerText = pData.name;
+                document.getElementById('pTag').innerText = pData.tag;
+                document.getElementById('pTrophies').innerText = pData.trophies.toLocaleString();
+                document.getElementById('pLevel').innerText = pData.expLevel;
+                document.getElementById('p3v3').innerText = pData['3v3Victories'].toLocaleString();
+
+                // Extraction des trophées spécifiques des Brawlers du joueur
+                const darrylObj = pData.brawlers.find(b => b.id == DARRYL_ID);
+                const rosaObj = pData.brawlers.find(b => b.id == ROSA_ID);
+
+                document.getElementById('darrylTrophies').innerText = darrylObj ? darrylObj.trophies : 0;
+                document.getElementById('rosaTrophies').innerText = rosaObj ? rosaObj.trophies : 0;
+
+                // 2. Fetch Classements Globaux en parallèle
+                const [resGlobalPlayers, resGlobalDarryl, resGlobalRosa, resFrDarryl, resFrRosa] = await Promise.all([
+                    fetch(`${PROXY_URL}/rankings/global/players`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
+                    fetch(`${PROXY_URL}/rankings/global/brawlers/${DARRYL_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
+                    fetch(`${PROXY_URL}/rankings/global/brawlers/${ROSA_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
+                    fetch(`${PROXY_URL}/rankings/${country}/brawlers/${DARRYL_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]})),
+                    fetch(`${PROXY_URL}/rankings/${country}/brawlers/${ROSA_ID}`, { headers }).then(r => r.json()).catch(() => ({items:[]}))
+                ]);
+
+                // Fonction utilitaire pour chercher la place
+                const checkRank = (list, tag) => {
+                    if (!list || !list.items) return '<span class="not-ranked">Hors Top 200</span>';
+                    const index = list.items.findIndex(item => item.tag === tag);
+                    return index !== -1 ? `<span class="rank-badge">TOP ${index + 1}</span>` : '<span class="not-ranked">Hors Top 200</span>';
+                };
+
+                // Injecter les vrais classements trouvés
+                document.getElementById('globalRank').innerHTML = checkRank(resGlobalPlayers, fullTag);
+                document.getElementById('darrylRankGlobal').innerHTML = checkRank(resGlobalDarryl, fullTag);
+                document.getElementById('rosaRankGlobal').innerHTML = checkRank(resGlobalRosa, fullTag);
+                document.getElementById('darrylRankFR').innerHTML = checkRank(resFrDarryl, fullTag);
+                document.getElementById('rosaRankFR').innerHTML = checkRank(resFrRosa, fullTag);
+
+                // Affichage final des résultats
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('navTabs').style.display = 'flex';
+                switchTab('general');
+
+            } catch (err) {
+                document.getElementById('loader').style.display = 'none';
+                alert("Erreur lors de la récupération des données : " + err.message);
+            }
+        }
+
+        function hideAllCards() {
+            document.getElementById('generalCard').style.display = 'none';
+            document.getElementById('darrylCard').style.display = 'none';
+            document.getElementById('rosaCard').style.display = 'none';
+        }
+
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            hideAllCards();
+
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            document.getElementById(`${tabName}Card`).style.display = 'block';
+        }
+    </script>
+</body>
+</html>
